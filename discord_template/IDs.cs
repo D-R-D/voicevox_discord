@@ -1,6 +1,6 @@
 ﻿using System.Configuration;
 
-namespace discord_template
+namespace voicevox_discord
 {
     public class Ids
     {
