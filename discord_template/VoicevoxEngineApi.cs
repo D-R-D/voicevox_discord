@@ -86,7 +86,6 @@ namespace voicevox_discord
                     var res = await client.PostAsync(@$"http://{engine_ipaddress}:{engine_port}/synthesis?speaker=" + id, conjson);
 
                     wav = await res.Content.ReadAsStreamAsync();
-                    Thread.Sleep(1000);
                     waitforwav.Set();
                 }catch(Exception ex)
                 {

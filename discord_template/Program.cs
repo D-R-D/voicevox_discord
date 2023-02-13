@@ -37,17 +37,6 @@ namespace voicevox_discord
             _ = new Program().MainAsync();
 
             Thread.Sleep(-1);
-
-            /*
-            for (int j = 0; j < paged_speakers.Count; j++) {
-                foreach (KeyValuePair<string, object> speaker in paged_speakers[j])
-                {
-                    Console.Write($"\"{speaker.Key}\":");
-
-                    Console.WriteLine($"{((Dictionary<string, string>)speaker.Value).Count} Params Found.");
-                }
-            }
-            */
         }
 
         public async Task MainAsync()
