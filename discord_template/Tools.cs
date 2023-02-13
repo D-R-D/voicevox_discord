@@ -1,4 +1,4 @@
-﻿namespace discord_template
+﻿namespace voicevox_discord
 {
     public static class Tools
     {

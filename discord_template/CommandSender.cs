@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace discord_template
+namespace voicevox_discord
 {
     internal class CommandSender
     {
@@ -10,11 +10,12 @@ namespace discord_template
         public CommandSender(string directoryPath, Ids ids)
         {
             if (directoryPath.IsNullOrEmpty()) { throw new Exception($"{nameof(directoryPath)}が不正です。\nnullもしくは空白です。"); }
-            //ファイル一覧を取得
+            //コマンドファイル一覧を取得
             if (!Directory.Exists(directoryPath)) { throw new Exception($"指定されたパス{directoryPath}は存在しません。"); }
             var CommandPathList = Directory.GetFiles(directoryPath, "*.json");
             if (CommandPathList.Length <= 0) { throw new Exception("指定されたパス内にjsonファイルが存在しませんでした。"); }
-            //ファイルの中身を取り出す
+
+            //コマンドファイルの中身を取り出す
             m_CommandList = new string[CommandPathList.Length];
             int i = 0;
             foreach (string CommandPath in CommandPathList)
@@ -39,7 +40,7 @@ namespace discord_template
                 {
                     HttpRequestMessage request = GetHeader(guild_id);
 
-                    if (Tools.IsNullOrEmpty(jsonCommand)) { throw new Exception("json_commandが不正です。\njson_commandがnullもしくは空白です。"); }
+                    if (jsonCommand.IsNullOrEmpty()) { throw new Exception("json_commandが不正です。\njson_commandがnullもしくは空白です。"); }
 
                     //HttpRequestMessageのコンテンツを設定する
                     HttpRequestMessage sendRequest = RequestContentBuilder(request, jsonCommand);
@@ -51,6 +52,9 @@ namespace discord_template
                 }
             }
         }
+
+        //
+        //ヘッダーの追加処理
         private HttpRequestMessage GetHeader(string guild_id)
         {
             if (guild_id.IsNullOrEmpty()) { throw new Exception("guild_idが不正です。\nguild_idがnull、もしくは空白です。"); }
@@ -64,6 +68,9 @@ namespace discord_template
 
             return request;
         }
+
+        //
+        //リクエストメッセージにコンテンツとしてjson形式のコマンド一覧を追加
         private HttpRequestMessage RequestContentBuilder(HttpRequestMessage requestMessage, string json_command)
         {
             Console.WriteLine(json_command);
