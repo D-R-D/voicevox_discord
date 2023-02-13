@@ -1,3 +1,3 @@
 # discord_template
 
-discordbotのテンプレート
+discordからvoicevoxを遊ぶためのbot
