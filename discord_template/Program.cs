@@ -19,7 +19,6 @@ namespace voicevox_discord
         {
             Ids ids = new Ids(reader);
 
-            
             //コマンドファイルからjson形式でコマンドを取得・設定する
             CommandSender commandSender = new CommandSender(Directory.GetCurrentDirectory() + "/commands", ids);
             commandSender.RequestSender();
@@ -103,23 +102,27 @@ namespace voicevox_discord
                 {
                     List<SocketMessageComponentData> components = modal.Data.Components.ToList();
 
+                    //話者情報と入力されたテキストを取り出す
                     string speakervalue = components.First().CustomId.ToString();
                     string text = components.First(x => x.CustomId == speakervalue).Value;
-
                     string[] speakervalues = speakervalue.Split('@');
                     string id = ((Dictionary<string, string>)speakers[speakervalues[1]])[speakervalues[2]];
+
+                    //VoicevoxEngineからWavファイルをもらう
                     Stream stream = voicevoxEngineApi!.GetWavFromApi(id, text);
 
+                    //ファイル添付に必用な処理
                     FileAttachment fa = new FileAttachment(stream, text.Replace("\n", "") + ".wav");
                     List<FileAttachment> flis = new List<FileAttachment>();
                     flis.Add(fa);
                     Optional<IEnumerable<FileAttachment>> optional = new Optional<IEnumerable<FileAttachment>>(flis);
-                    string content = "";
 
+                    //話者"もち子さん"はクレジットに記載する名前が話者リストの名前と違うので別にクレジット記載用の処理を追加した
+                    string content = "";
                     if (speakervalues[1] != "もち子さん") { content = modal.User.Mention + "\n話者[ VOICEVOX:" + speakervalues[1] + " ] \nstyle[ " + speakervalues[2] + " ( id:" + id + " ) ]\n"; }
                     else { content = modal.User.Mention + "\n話者[ VOICEVOX:もち子(cv 明日葉よもぎ) ] \nstyle[ " + speakervalues[2] + " ( id:" + id + " ) ]\n"; }
-
-                    content += "受け取った文字列: " + (text.Length > 100 ? text.Substring(0, 100) + "..." : text.Substring(0, text.Length));
+                    
+                    content += "受け取った文字列: " + (text.Length > 100 ? text.Substring(0, 100) + "..." : text.Substring(0, text.Length)); //長さ100以上のテキストを切り捨てる
 
                     await modal.ModifyOriginalResponseAsync(m =>
                     {

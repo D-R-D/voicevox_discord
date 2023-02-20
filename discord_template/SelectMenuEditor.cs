@@ -13,7 +13,7 @@ namespace voicevox_discord
     {
         public static SelectMenuBuilder CreateSpeakerMenu(List<Dictionary<string,object>> pagedspeakers, string page)
         {
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("select item").WithCustomId("speaker").WithMinValues(1).WithMaxValues(1);
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId("speaker").WithMinValues(1).WithMaxValues(1);
             int nowpage =int.Parse(page);
 
             if(nowpage > 0) 
@@ -43,7 +43,7 @@ namespace voicevox_discord
 
         public static SelectMenuBuilder CreateStyleMenu(Dictionary<string,object> speakers, string speakername)
         {
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("select item").WithCustomId("speaker_id").WithMinValues(1).WithMaxValues(1);
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("スタイル一覧").WithCustomId("speaker_id").WithMinValues(1).WithMaxValues(1);
             Dictionary<string,string> styles = new Dictionary<string, string>((Dictionary<string,string>)speakers[speakername]);
 
             foreach (KeyValuePair<string, string> style in styles)

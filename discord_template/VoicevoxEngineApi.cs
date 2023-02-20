@@ -1,10 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace voicevox_discord
 {
@@ -13,20 +7,28 @@ namespace voicevox_discord
         private static string engine_ipaddress = string.Empty;
         private static int engine_port = 0;
 
-        public VoicevoxEngineApi(string ipaddress, int port) 
+        //
+        //ipaddressとportを設定する
+        public VoicevoxEngineApi(string ipaddress, int port)
         {
             if (Tools.IsNullOrEmpty(ipaddress)) { throw new ArgumentNullException(nameof(ipaddress)); }
-            if (port < 1 || port > 65535) { throw new ArgumentOutOfRangeException(nameof(port)); }
+            if (Tools.IsNotPortNumber(port)) { throw new Exception($"{nameof(port)}がポート番号でない、もしくはNullです。"); }
 
             engine_ipaddress = ipaddress;
             engine_port = port;
         }
 
+        //
+        //話者リストをjson形式で取得する
         public string GetSpeakersJson()
         {
+            if (Tools.IsNullOrEmpty(engine_ipaddress)) { throw new Exception($"{nameof(engine_ipaddress)}がNullもしくは空です。"); }
+            if (Tools.IsNotPortNumber(engine_port)) { throw new Exception($"{nameof(engine_port)}が不正な値({engine_port})です。"); }
+
             string speaker_json = string.Empty;
             ManualResetEvent waitingjson = new ManualResetEvent(false);
 
+            //VoicevoxEngineからjson形式の話者リストを取得する
             Task.Run(async () =>
             {
                 speaker_json = await GetProcessAsync();
@@ -37,6 +39,8 @@ namespace voicevox_discord
             return speaker_json!;
         }
 
+        //
+        //指定した情報でデータを取得できるまで粘る
         private async Task<string> GetProcessAsync()
         {
             string speaker_json = string.Empty;
@@ -58,6 +62,8 @@ namespace voicevox_discord
             return speaker_json!;
         }
 
+        //
+        //渡されたurlからGetする
         private static async Task<string> GetJsonFromApi(string url)
         {
             HttpClient client = new HttpClient();
@@ -66,14 +72,15 @@ namespace voicevox_discord
             return result.Content.ReadAsStringAsync().Result;
         }
 
+        //
+        //Wavファイルを取得してStreamで返す
         public Stream GetWavFromApi(string id, string text)
         {
-            Console.WriteLine($"{id}: {text}");
-
             ManualResetEvent waitforwav = new ManualResetEvent(false);
             Stream? wav = null;
 
-            Task.Run(async() => {
+            Task.Run(async () =>
+            {
                 try
                 {
                     HttpClient client = new HttpClient();
@@ -87,7 +94,8 @@ namespace voicevox_discord
 
                     wav = await res.Content.ReadAsStreamAsync();
                     waitforwav.Set();
-                }catch(Exception ex)
+                }
+                catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
                 }

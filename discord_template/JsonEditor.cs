@@ -12,14 +12,15 @@ namespace voicevox_discord
 {
     internal class JsonEditor
     {
+        //
+        //渡されたJson形式の話者データをDictionary型に変換して返す
+        //Dictionaryの構造 -> {"speakername0":{ "stylename0":"styleid0", "stylename1":"styleid1"}, "speakername1":{ "stylename0":"styleid0" }}
         public static Dictionary<string,object> ObjectFromJson(string json)
         {
             if (Tools.IsNullOrEmpty(json)) { throw new ArgumentNullException(nameof(json)); }
-
             ArrayList speakers = JsonConvert.DeserializeObject<ArrayList>(json)!;
 
             Dictionary<string,object> speakerobj = new Dictionary<string,object>();
-
             foreach(var speaker in speakers)
             {
                 Dictionary<string, object> speakerobject = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(speaker))!;
@@ -38,6 +39,8 @@ namespace voicevox_discord
             return speakerobj;
         }
 
+        //
+        //Dictionaryをpagecountごとに分割してListに格納する
         public static List<Dictionary<string,object>> CreatePagedObject(Dictionary<string,object> objects,int pagecount)
         {
             List<Dictionary<string, object>> pagedobjects = new();
