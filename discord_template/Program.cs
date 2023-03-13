@@ -110,9 +110,6 @@ namespace voicevox_discord
                         }
                         ulong guildid = command.GuildId.Value;
 
-                        //initaudioservice
-                        audioService.initGuildService(guildid);
-
                         //join
                         await audioService!.JoinOperation(command, firstval);
 
@@ -130,6 +127,8 @@ namespace voicevox_discord
                     }
                     if (commandname == "read")
                     {
+                        audioService.CheckEngineApi();
+
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await audioService.TextReader(command, firstval);

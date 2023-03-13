@@ -46,14 +46,17 @@ namespace voicevox_discord
 
     internal class AudioService
     {   
-        internal Dictionary<ulong, AudioServiseData> GuildAudioService = new Dictionary<ulong, AudioServiseData>();
+        //internal Dictionary<ulong, AudioServiseData> GuildAudioService = new Dictionary<ulong, AudioServiseData>();
+        internal List<KeyValuePair<ulong, AudioServiseData>> GuildAudioService = new();
 
-        //private IVoiceChannel? voiceChannel = null;
-        //private IAudioClient? audioclient = null;
-        //internal KeyValuePair<string, int> name_id_pair = new("voicevox:四国めたん:ノーマル", 2);
-        //private AudioOutStream? audiooutstream = null;
-        //private VoicevoxEngineApi? voicevoxEngineApi = null;
-
+        public void CheckEngineApi()
+        {
+            foreach(var item in GuildAudioService)
+            {
+                Console.Write($"({item.Key})");
+                item.Value.voicevoxEngineApi!.Info();
+            }
+        }
 
         /// <summary>
         /// setting
@@ -61,7 +64,8 @@ namespace voicevox_discord
         /// <param name="guildid"></param>
         public void initGuildService(ulong guildid)
         {
-            GuildAudioService.Add(guildid, new AudioServiseData());
+            KeyValuePair<ulong, AudioServiseData> AudioService = new(guildid, new AudioServiseData());
+            GuildAudioService.Add(AudioService);
         }
 
         /// <summary>
@@ -70,9 +74,12 @@ namespace voicevox_discord
         /// <param name="guildid"></param>
         private bool CheckGuildService(ulong guildid)
         {
-            if (GuildAudioService.ContainsKey(guildid))
+            foreach(KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
             {
-                return true;
+                if(AudioService.Key == guildid)
+                {
+                    return true;
+                }
             }
 
             return false;
@@ -89,8 +96,18 @@ namespace voicevox_discord
             {
                 initGuildService(guildid);
             }
-            GuildAudioService[guildid].SetEngine(SpeakerInfo.GetEngineApiFromengine_name(_engine_name));
-            GuildAudioService[guildid].SetEngineName(_engine_name);
+
+            KeyValuePair<ulong, AudioServiseData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            {
+                if (AudioService.Key == guildid)
+                {
+                    audioService = AudioService;
+                }
+            }
+
+            audioService.Value.SetEngine(SpeakerInfo.GetEngineApiFromengine_name(_engine_name));
+            audioService.Value.SetEngineName(_engine_name);
         }
 
         /// <summary>
@@ -106,7 +123,15 @@ namespace voicevox_discord
             {
                 initGuildService(guildid);
             }
-            AudioServiseData audioServiseData = GuildAudioService[guildid];
+            KeyValuePair<ulong, AudioServiseData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            {
+                if (AudioService.Key == guildid)
+                {
+                    audioService = AudioService;
+                }
+            }
+            AudioServiseData audioServiseData = audioService.Value;
 
             if (firstval == "join")
             {
@@ -171,7 +196,6 @@ namespace voicevox_discord
                     text = $"{audioServiseData.name}です。再起動してきました。";
                 }
 
-
                 try
                 {
                     await PlayAudio(audioServiseData, guildid, text);
@@ -193,7 +217,15 @@ namespace voicevox_discord
             {
                 initGuildService(guildid);
             }
-            AudioServiseData audioServiseData = GuildAudioService[guildid];
+            KeyValuePair<ulong, AudioServiseData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            {
+                if (AudioService.Key == guildid)
+                {
+                    audioService = AudioService;
+                }
+            }
+            AudioServiseData audioServiseData = audioService.Value;
             await audioServiseData.audioclient!.StopAsync();
 
             audioServiseData.voiceChannel = null;
@@ -221,8 +253,15 @@ namespace voicevox_discord
         public void SetSpeaker(ulong guildid, string name, string style_name, int id, string engine_name)
         {
             setnewEngine(guildid, engine_name);
-
-            AudioServiseData audioServiseData = GuildAudioService[guildid];
+            KeyValuePair<ulong, AudioServiseData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            {
+                if (AudioService.Key == guildid)
+                {
+                    audioService = AudioService;
+                }
+            }
+            AudioServiseData audioServiseData = audioService.Value;
             audioServiseData.SetSpeakerInfo(name, style_name, id);
 
             Console.WriteLine(name + " : " + id);
@@ -266,7 +305,15 @@ namespace voicevox_discord
 
                 return;
             }
-            AudioServiseData audioServiseData = GuildAudioService[guildid];
+            KeyValuePair<ulong, AudioServiseData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            {
+                if (AudioService.Key == guildid)
+                {
+                    audioService = AudioService;
+                }
+            }
+            AudioServiseData audioServiseData = audioService.Value;
 
             if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
             {
@@ -297,6 +344,7 @@ namespace voicevox_discord
         private async Task PlayAudio(AudioServiseData audioServiseData, ulong guildid, string text)
         {
             string audiofile = $"{Directory.GetCurrentDirectory()}/ffmpeg/audiofile/{guildid}.wav";
+            audioServiseData.voicevoxEngineApi!.Info();
             using (Stream wavstream = audioServiseData.voicevoxEngineApi!.GetWavFromApi(audioServiseData.id.ToString(), text))
             using (var wfr = new WaveFileReader(wavstream))
             {
