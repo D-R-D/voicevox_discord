@@ -1,83 +1,140 @@
 ﻿using Discord;
 using Discord.Audio;
 using Discord.WebSocket;
-using NAudio.MediaFoundation;
 using NAudio.Wave;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using CliWrap;
-using Discord.Audio.Streams;
-using System;
 
 namespace voicevox_discord
 {
-    internal class AudioService
+    internal class AudioServiseData
     {
+        public string name { get; private set; } = "四国めたん";
+        public string engine_name { get; private set; } = "voicevox";
+        public string style_name { get; private set; } = "ノーマル";
+        public int id { get; private set; } = 2;
+
+        public VoicevoxEngineApi? voicevoxEngineApi { get; private set; } = null;
+
+        public IVoiceChannel? voiceChannel { get; set; } = null;
+        public IAudioClient? audioclient { get; set; } = null;
+        public AudioOutStream? audiooutstream { get; set; } = null;
+
+        public AudioServiseData(VoicevoxEngineApi _voicevoxEngineApi)
+        {
+            SetEngine(_voicevoxEngineApi);
+        }
+
+        public void SetEngine(VoicevoxEngineApi _voicevoxEngineApi)
+        {
+            voicevoxEngineApi = _voicevoxEngineApi;
+        }
+
+        public void SetSpeakerInfo(string _engine_name, string _name, string _style_name, int _id)
+        {
+            engine_name = _engine_name;
+            style_name = _style_name;
+            name = _name;
+            id = _id;
+        }
+    }
+
+    internal class AudioService
+    {   
+        internal Dictionary<ulong, AudioServiseData> GuildAudioService = new Dictionary<ulong, AudioServiseData>();
+
         private IVoiceChannel? voiceChannel = null;
         private IAudioClient? audioclient = null;
         internal KeyValuePair<string, int> name_id_pair = new("voicevox:四国めたん:ノーマル", 2);
         private AudioOutStream? audiooutstream = null;
         private VoicevoxEngineApi? voicevoxEngineApi = null;
 
-        public void initengine(VoicevoxEngineApi _voicevoxEngineApi)
+
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="guildid"></param>
+        public void initGuildService(ulong guildid, VoicevoxEngineApi _voicevoxEngineApi)
         {
+            GuildAudioService.Add(guildid, new AudioServiseData(_voicevoxEngineApi));
+        }
+
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="guildid"></param>
+        public bool CheckGuildService(ulong guildid)
+        {
+            if (GuildAudioService.ContainsKey(guildid))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="guildid"></param>
+        /// <param name="_voicevoxEngineApi"></param>
+        public void initengine(ulong guildid, VoicevoxEngineApi _voicevoxEngineApi)
+        {
+            if (!CheckGuildService(guildid))
+            {
+                initGuildService(guildid, _voicevoxEngineApi);
+            }
+
+            GuildAudioService[guildid].SetEngine(_voicevoxEngineApi);
+
             voicevoxEngineApi = _voicevoxEngineApi;
         }
 
-        public void SetSpeaker(string name, int id)
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="firstval"></param>
+        /// <returns></returns>
+        public async Task JoinOperation(SocketSlashCommand command, string firstval)
         {
-            if (Tools.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
-            name_id_pair = new KeyValuePair<string, int>(name, id);
-
-            Console.WriteLine(name + " : " + id);
-
-            if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
+            if (!command.GuildId.HasValue)
             {
+                await command.DeleteOriginalResponseAsync();
                 return;
             }
+            ulong guildid = command.GuildId.Value;
+            AudioServiseData audioServiseData = GuildAudioService[guildid];
 
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await PlayAudio(voicevoxEngineApi!, $"変わりまして{name_id_pair.Key.Split(":")[1]}です。{name_id_pair.Key.Split(":")[2]}な感じで行きますね。");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            });
-        }
-        public async Task<bool> CommandRunner(SocketSlashCommand command, string firstval)
-        {
             if (firstval == "join")
             {
                 try
                 {
-                    bool rejoin = false;
-                    if (audioclient != null)
+                    if (((IVoiceState)command.User).VoiceChannel == null)
                     {
-                        if (audioclient!.ConnectionState == ConnectionState.Connected)
+                        await command.ModifyOriginalResponseAsync(m => { m.Content = "有効ボイスチャンネル ゼロ\nイグジット完了…\n…止まった"; });
+
+                        return;
+                    }
+
+                    bool rejoin = false;
+                    if (audioServiseData.audioclient != null)
+                    {
+                        if (audioServiseData.audioclient.ConnectionState == ConnectionState.Connected)
                         {
                             rejoin = true;
 
-                            await audioclient!.StopAsync();
-                            voiceChannel = null;
+                            await audioServiseData.audioclient.StopAsync();
+                            audioServiseData.voiceChannel = null;
                         }
                     }
-                    voiceChannel = ((IVoiceState)command.User).VoiceChannel;
-                    await JoinChannel(rejoin);
+                    audioServiseData.voiceChannel = ((IVoiceState)command.User).VoiceChannel;
+                    await JoinChannel(rejoin, audioServiseData);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
                     await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
-
-                    return false;
                 }
-
-                return true;
             }
 
             if (firstval == "leave")
@@ -85,37 +142,36 @@ namespace voicevox_discord
                 if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
                 {
                     await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
-                    return false;
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
                 await LeaveAsync();
                 voiceChannel = null;
 
-                return false;
+                return;
             }
 
-            return false;
+            await command.DeleteOriginalResponseAsync();
         }
 
-        public async Task JoinChannel(bool rejoin)
+        public async Task JoinChannel(bool rejoin, AudioServiseData audioServiseData)
         {
-            audioclient = await voiceChannel!.ConnectAsync().ConfigureAwait(false);
-            audiooutstream = audioclient.CreatePCMStream(AudioApplication.Mixed);
-            audioclient.Disconnected += Audioclient_Disconnected;
+            audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync().ConfigureAwait(false);
+            audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed);
+            audioServiseData.audioclient.Disconnected += Audioclient_Disconnected;
 
             _ = Task.Run(async () =>
             {
-                string text = $"{name_id_pair.Key.Split(":")[1]}です。{name_id_pair.Key.Split(":")[2]}な感じで行きますね。";
+                string text = $"{audioServiseData.name}です。{audioServiseData.style_name}な感じで行きますね。";
 
                 if (rejoin)
                 {
-                    text = $"{name_id_pair.Key.Split(":")[1]}です。再起動してきました。";
+                    text = $"{audioServiseData.name}です。再起動してきました。";
                 }
 
 
                 try
                 {
-                    await PlayAudio(voicevoxEngineApi!, text);
+                    await PlayAudio(audioServiseData, text);
                 }
                 catch (Exception ex)
                 {
@@ -139,8 +195,47 @@ namespace voicevox_discord
             return;
         }
 
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="id"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public void SetSpeaker(string name, int id)
+        {
+            if (Tools.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
+            name_id_pair = new KeyValuePair<string, int>(name, id);
+
+            Console.WriteLine(name + " : " + id);
+
+            if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await PlayAudio(, $"変わりまして{name_id_pair.Key.Split(":")[1]}です。{name_id_pair.Key.Split(":")[2]}な感じで行きますね。");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            });
+        }
+
+        /// <summary>
+        /// use
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public async Task TextReader(SocketSlashCommand command, string text)
         {
+
+
             if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
             {
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
@@ -168,10 +263,10 @@ namespace voicevox_discord
         }
 
 
-        private async Task PlayAudio(VoicevoxEngineApi _voicevoxEngineApi, string text)
+        private async Task PlayAudio(AudioServiseData audioServiseData, string text)
         {
             string audiofile = $"{Directory.GetCurrentDirectory()}/ffmpeg/audiofile/source.wav";
-            using (Stream wavstream = _voicevoxEngineApi!.GetWavFromApi(name_id_pair.Value.ToString(), text))
+            using (Stream wavstream = audioServiseData.voicevoxEngineApi!.GetWavFromApi(name_id_pair.Value.ToString(), text))
             using (var wfr = new WaveFileReader(wavstream))
             {
                 WaveFileWriter.CreateWaveFile(audiofile, wfr);
