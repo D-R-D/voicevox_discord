@@ -1,0 +1,22 @@
+{
+  "name": "setspeaker",
+  "description": "audioservice",
+  "options": [
+    {
+      "name": "control",
+      "description": "control command",
+      "type": 3,
+      "required": true,
+      "choices": [
+        {
+          "name": "voicevox",
+          "value": "voicevox"
+        },
+        {
+          "name": "coeiroink",
+          "value": "coeiroink"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "read",
+  "description": "readtext",
+  "options": [
+    {
+      "name": "text",
+      "description": "control command",
+      "type": 3,
+      "required": true
+    }
+  ]
+}

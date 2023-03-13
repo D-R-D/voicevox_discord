@@ -11,9 +11,11 @@ namespace voicevox_discord
 {
     internal class SelectMenuEditor
     {
-        public static SelectMenuBuilder CreateSpeakerMenu(List<Dictionary<string,object>> pagedspeakers, string page)
+        public static SelectMenuBuilder CreateSpeakerMenu(List<Dictionary<string,object>> pagedspeakers, string page, string corename, bool voicechannel = false)
         {
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId("speaker").WithMinValues(1).WithMaxValues(1);
+            string commandmode = "0";
+            if (voicechannel) { commandmode = "1"; }
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId($"speaker:{corename}:{commandmode}").WithMinValues(1).WithMaxValues(1);
             int nowpage =int.Parse(page);
 
             if(nowpage > 0) 
@@ -41,10 +43,12 @@ namespace voicevox_discord
             return builder;
         }
 
-        public static SelectMenuBuilder CreateStyleMenu(Dictionary<string,object> speakers, string speakername)
+        public static SelectMenuBuilder CreateStyleMenu(Dictionary<string,object> speaker, string speakername, string corename, bool voicechannel = false)
         {
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("スタイル一覧").WithCustomId("speaker_id").WithMinValues(1).WithMaxValues(1);
-            Dictionary<string,string> styles = new Dictionary<string, string>((Dictionary<string,string>)speakers[speakername]);
+            string commandmode = "0";
+            if (voicechannel) { commandmode = "1"; }
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("スタイル一覧").WithCustomId($"speaker_id:{corename}:{commandmode}").WithMinValues(1).WithMaxValues(1);
+            Dictionary<string,string> styles = new Dictionary<string, string>((Dictionary<string,string>)speaker[speakername]);
 
             foreach (KeyValuePair<string, string> style in styles)
             {

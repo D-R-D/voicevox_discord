@@ -8,31 +8,31 @@ namespace voicevox_discord
     class Program
     {
         public static AppSettingsReader reader = new AppSettingsReader();
-        private static VoicevoxEngineApi? voicevoxEngineApi = null;
-        private static Dictionary<string, object> speakers = new();
-        private static List<Dictionary<string, object>> paged_speakers = new();
+        private static Dictionary<string, Dictionary<string, object>> core_speakers = new();
+        private static Dictionary<string, List<Dictionary<string, object>>> paged_core_speakers = new();
+        private static Dictionary<string, KeyValuePair<string, int>> enginedictionary = new();
+
+        private static AudioService audioService = new AudioService();
 
         private DiscordSocketClient? _client;
         private static CommandService? _commands;
 
         public static void Main(string[] args)
         {
+            InitDirectory initDirectory = new InitDirectory();
+            initDirectory.init();
+
+            //configから各IDを取得
             Ids ids = new Ids(reader);
 
             //コマンドファイルからjson形式でコマンドを取得・設定する
-            CommandSender commandSender = new CommandSender(Directory.GetCurrentDirectory() + "/commands", ids);
+            CommandSender commandSender = new CommandSender(Directory.GetCurrentDirectory() + "/commands", ids, reader.GetValue("discordapi_version",typeof(string)).ToString()!);
             commandSender.RequestSender();
+            Console.WriteLine("CommandSender SUCCESS!!");
+
+            EngineList engineList = new EngineList();
+            engineList.GetListFromXmlfile("voicevox_engine_list.xml", enginedictionary, core_speakers, paged_core_speakers);
             
-            
-            //voicevox_engineのwebapiからjson形式の話者一覧を取得
-            voicevoxEngineApi = new VoicevoxEngineApi(reader.GetValue("voicevox_engine", typeof(string)).ToString()!, 50021);
-            string speaker_json = voicevoxEngineApi.GetSpeakersJson();
-
-            //1ページ16話者としてリストを作成
-            speakers = JsonEditor.ObjectFromJson(speaker_json);
-            paged_speakers = JsonEditor.CreatePagedObject(speakers, 16);
-
-
             _ = new Program().MainAsync();
 
             Thread.Sleep(-1);
@@ -77,108 +77,186 @@ namespace voicevox_discord
 
         //
         //スラッシュコマンドのイベント処理
+        [Command(RunMode=RunMode.Async)]
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
-            //コマンド受信時の処理
-            if (command.Data.Name == "voicevox")
+            _ = Task.Run(async () =>
             {
-                var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_speakers, "0");
-                var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+                try
+                {
+                    string commandname = command.Data.Name;
 
-                await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
-            }
+                    if (commandname != "voicechannel" && commandname != "setspeaker" && commandname != "read")
+                    {
+                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[commandname], "0", commandname, false);
+                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+
+                        await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
+
+                        return;
+                    }
+                    if (commandname == "voicechannel")
+                    {
+                        await command.DeferAsync();
+                        string firstval = command.Data.Options.First().Value.ToString()!;
+
+                        //initengine
+                        string enginename = audioService.name_id_pair.Key.Split(":")[0];
+                        VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[enginename].Key, enginedictionary[enginename].Value, enginename);
+                        audioService.initengine(voicevoxEngineApi);
+
+                        bool setvalueflag = await audioService!.CommandRunner(command, firstval);
+
+                        if (setvalueflag)
+                        {
+                            await command.DeleteOriginalResponseAsync();
+                        }
+
+                        return;
+                    }
+                    if (commandname == "setspeaker")
+                    {
+                        string firstval = command.Data.Options.First().Value.ToString()!;
+                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[firstval], "0", firstval, true);
+                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+
+                        await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
+
+                        return;
+                    }
+                    if (commandname == "read")
+                    {
+                        await command.DeferAsync();
+                        string firstval = command.Data.Options.First().Value.ToString()!;
+                        string enginename = audioService.name_id_pair.Key.Split(":")[0];
+
+                        VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[enginename].Key, enginedictionary[enginename].Value, enginename);
+                        await audioService.TextReader(command, firstval);
+
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    await command.RespondAsync(ex.Message);
+                }
+            });
+
+            await Task.CompletedTask;
+        }
+
+        //
+        //セレクトメニューのイベント処理
+        private static async Task SelectMenuHandler(SocketMessageComponent arg)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    SelectMenuController selectMenuController = new SelectMenuController(arg);
+
+                    string[] commandid = arg.Data.CustomId.Split(':'); //speaker:corename:commandmode
+                    string[] selecteditem = string.Join(", ", arg.Data.Values).Split('@'); //コマンド@コマンド名
+                    bool commandmode = false;
+                    if (commandid[2] == "1") { commandmode = true; }
+
+                    if (commandid[0] == "speaker")
+                    {
+                        KeyValuePair<string, ComponentBuilder> respondcontent = selectMenuController.BuildSelectmenu(commandid, commandmode, paged_core_speakers, core_speakers);
+
+                        await arg.RespondAsync(respondcontent.Key, components: respondcontent.Value.Build(), ephemeral: true);
+                    }
+                    else if (commandid[0] == "speaker_id")
+                    {
+                        string value = string.Join(", ", arg.Data.Values);
+                        if (!commandmode)
+                        {
+                            var textitem = new TextInputBuilder().WithLabel("INPUT TEXT").WithCustomId(value).WithStyle(TextInputStyle.Paragraph).WithRequired(true).WithPlaceholder("話して欲しい文章を入力");
+                            var builder = new ModalBuilder().WithTitle("Input Text").WithCustomId($"speak_text:{commandid[1]}").AddTextInput(textitem);
+
+                            await arg.RespondWithModalAsync(builder.Build());
+                        }
+                        else
+                        {
+                            string speakername = selecteditem[1];
+                            string stylename = selecteditem[2];
+                            int speakerid = int.Parse(((Dictionary<string, string>)core_speakers[commandid[1]][speakername])[stylename]);
+                            audioService!.SetSpeaker($"{commandid[1]}:{speakername}:{stylename}", speakerid);
+                            //initengine
+                            string enginename = audioService.name_id_pair.Key.Split(":")[0];
+                            VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[enginename].Key, enginedictionary[enginename].Value, enginename);
+                            audioService.initengine(voicevoxEngineApi);
+
+                            await arg.RespondAsync($"話者を[{commandid[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerid})]に変更しました");
+                        }
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    await arg.RespondAsync(ex.Message);
+                }
+            });
+
+            await Task.CompletedTask;
         }
 
         //
         //テキストボックスのイベント処理
         private static async Task ModalHandler(SocketModal modal)
         {
-            
-            await modal.RespondAsync("PROCESSING...");
-            
-            try
+            _ = Task.Run(async () =>
             {
-                if (modal.Data.CustomId == "speak_text")
+                await modal.RespondAsync("PROCESSING...");
+                string[] commandid = modal.Data.CustomId.Split(':');
+
+                Console.WriteLine(commandid[0] + ":" + commandid[1]);
+
+                try
                 {
-                    List<SocketMessageComponentData> components = modal.Data.Components.ToList();
-
-                    //話者情報と入力されたテキストを取り出す
-                    string speakervalue = components.First().CustomId.ToString();
-                    string text = components.First(x => x.CustomId == speakervalue).Value;
-                    string[] speakervalues = speakervalue.Split('@');
-                    string id = ((Dictionary<string, string>)speakers[speakervalues[1]])[speakervalues[2]];
-
-                    //VoicevoxEngineからWavファイルをもらう
-                    Stream stream = voicevoxEngineApi!.GetWavFromApi(id, text);
-
-                    //ファイル添付に必用な処理
-                    FileAttachment fa = new FileAttachment(stream, text.Replace("\n", "") + ".wav");
-                    List<FileAttachment> flis = new List<FileAttachment>();
-                    flis.Add(fa);
-                    Optional<IEnumerable<FileAttachment>> optional = new Optional<IEnumerable<FileAttachment>>(flis);
-
-                    //話者"もち子さん"はクレジットに記載する名前が話者リストの名前と違うので別にクレジット記載用の処理を追加した
-                    string content = "";
-                    if (speakervalues[1] != "もち子さん") { content = modal.User.Mention + "\n話者[ VOICEVOX:" + speakervalues[1] + " ] \nstyle[ " + speakervalues[2] + " ( id:" + id + " ) ]\n"; }
-                    else { content = modal.User.Mention + "\n話者[ VOICEVOX:もち子(cv 明日葉よもぎ) ] \nstyle[ " + speakervalues[2] + " ( id:" + id + " ) ]\n"; }
-                    
-                    content += "受け取った文字列: " + (text.Length > 100 ? text.Substring(0, 100) + "..." : text.Substring(0, text.Length)); //長さ100以上のテキストを切り捨てる
-
-                    await modal.ModifyOriginalResponseAsync(m =>
+                    if (commandid[0] == "speak_text")
                     {
-                        m.Content = content;
-                        m.Attachments = optional;
-                    });
+                        VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[commandid[1]].Key, enginedictionary[commandid[1]].Value, commandid[1]);
+                        List<SocketMessageComponentData> components = modal.Data.Components.ToList();
+
+                        //話者情報と入力されたテキストを取り出す
+                        string speakervalue = components.First().CustomId.ToString();
+                        string text = components.First(x => x.CustomId == speakervalue).Value;
+                        string[] speakervalues = speakervalue.Split('@');
+                        string id = ((Dictionary<string, string>)core_speakers[commandid[1]][speakervalues[1]])[speakervalues[2]];
+                        //VoicevoxEngineからWavファイルをもらう
+                        Stream stream = voicevoxEngineApi!.GetWavFromApi(id, text);
+
+                        //ファイル添付に必用な処理
+                        FileAttachment fa = new FileAttachment(stream, text.Replace("\n", "") + ".wav");
+                        List<FileAttachment> flis = new List<FileAttachment>();
+                        flis.Add(fa);
+                        Optional<IEnumerable<FileAttachment>> optional = new Optional<IEnumerable<FileAttachment>>(flis);
+
+                        //話者"もち子さん"はクレジットに記載する名前が話者リストの名前と違うので別にクレジット記載用の処理を追加
+                        string content = "";
+                        if (speakervalues[1] != "もち子さん") { content = $"{modal.User.Mention}\n話者[ {commandid[1].ToUpper()}:{speakervalues[1]} ]\nstyle[ {speakervalues[2]} ( id:{id} ) ]\n"; }
+                        else { content = $"{modal.User.Mention}\n話者[ {commandid[1].ToUpper()}:もち子(cv 明日葉よもぎ) ]\nstyle[ {speakervalues[2]} ( id:{id} ) ]\n"; }
+
+                        content += $"受け取った文字列: {(text.Length > 100 ? $"{text.Substring(0, 100)} ..." : text.Substring(0, text.Length))}"; //長さ100以上のテキストを切り捨てる
+
+                        await modal.ModifyOriginalResponseAsync(m =>
+                        {
+                            m.Content = content;
+                            m.Attachments = optional;
+                        });
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                await modal.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
-            }
-            
-        }
-
-        //
-        //セレクトメニューのイベント処理
-        private async Task SelectMenuHandler(SocketMessageComponent arg)
-        {
-            try
-            {
-                if (arg.Data.CustomId.ToString() == "speaker")
+                catch (Exception ex)
                 {
-                    var selecteditem = string.Join(", ", arg.Data.Values).Split('@'); //コマンド@コマンド名
-
-                    if (selecteditem[0] == "page")
-                    {
-                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_speakers, selecteditem[1]);
-                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
-
-                        await arg.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
-                    }
-                    else
-                    {
-                        var menuBuilder = SelectMenuEditor.CreateStyleMenu(speakers, selecteditem[1]);
-                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
-
-                        //応答
-                        await arg.RespondAsync("以下の選択肢から話者のスタイルを選択してください", components: builder.Build(), ephemeral: true);
-                    }
-                    }
-                else if (arg.Data.CustomId.ToString() == "speaker_id")
-                {
-                    string value = string.Join(", ", arg.Data.Values);
-                    var textitem = new TextInputBuilder().WithLabel("VOICEVOX SPEAK TEXT").WithCustomId(value).WithStyle(TextInputStyle.Paragraph).WithRequired(true).WithPlaceholder("話して欲しい文章を入力");
-                    var builder = new ModalBuilder().WithTitle("Input Text").WithCustomId("speak_text").AddTextInput(textitem);
-
-                    await arg.RespondWithModalAsync(builder.Build());
+                    Console.WriteLine(ex.Message);
+                    await modal.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                await arg.RespondAsync(ex.Message);
-            }
+            });
+
+            await Task.CompletedTask;
         }
     }
 }

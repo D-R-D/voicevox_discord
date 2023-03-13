@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<enginelist>
+	<engine>
+		<name>voicevox</name>
+		<ipaddress>192.168.11.188</ipaddress>
+		<port>50021</port>
+	</engine>
+
+	<engine>
+		<name>coeiroink</name>
+		<ipaddress>192.168.11.188</ipaddress>
+		<port>50031</port>
+	</engine>
+</enginelist>

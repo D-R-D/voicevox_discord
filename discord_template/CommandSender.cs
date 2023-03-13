@@ -6,8 +6,9 @@ namespace voicevox_discord
     {
         public readonly string[] m_CommandList;
         public readonly Ids m_Ids;
+        public readonly string m_ApiVersion;
 
-        public CommandSender(string directoryPath, Ids ids)
+        public CommandSender(string directoryPath, Ids ids, string apiVersion)
         {
             if (directoryPath.IsNullOrEmpty()) { throw new Exception($"{nameof(directoryPath)}が不正です。\nnullもしくは空白です。"); }
             //コマンドファイル一覧を取得
@@ -26,6 +27,9 @@ namespace voicevox_discord
 
             if (ids == null) { throw new ArgumentNullException("id"); }
             m_Ids = ids;
+
+            if (Tools.IsNullOrEmpty(apiVersion)) { throw new Exception($"{nameof(apiVersion)}がNullもしくは空白です。"); }
+            m_ApiVersion = apiVersion;
         }
 
         public void RequestSender()
@@ -61,7 +65,7 @@ namespace voicevox_discord
             if (m_Ids.m_ApplicationId.IsNullOrEmpty()) { throw new Exception("application_idが不正です。\napplication_idがnull、もしくは空白です。"); }
             if (m_Ids.m_Token.IsNullOrEmpty()) { throw new Exception("Tokenが不正です。\nTokenがnull、もしくは空白です。"); }
 
-            string url = "https://discord.com/api/v8/applications/" + m_Ids.m_ApplicationId + "/guilds/" + guild_id + "/commands";
+            string url = $"https://discord.com/api/v{m_ApiVersion}/applications/{m_Ids.m_ApplicationId}/guilds/{guild_id}/commands";
             UriBuilder builder = new UriBuilder(new Uri(url));
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, builder.Uri);
             request.Headers.Add("Authorization", "Bot " + m_Ids.m_Token);

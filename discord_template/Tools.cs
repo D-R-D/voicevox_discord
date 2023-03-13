@@ -1,4 +1,6 @@
-﻿namespace voicevox_discord
+﻿using System.Runtime.Serialization.Formatters.Binary;
+
+namespace voicevox_discord
 {
     public static class Tools
     {

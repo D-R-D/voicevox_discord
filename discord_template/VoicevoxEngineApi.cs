@@ -6,22 +6,32 @@ namespace voicevox_discord
     {
         private static string engine_ipaddress = string.Empty;
         private static int engine_port = 0;
+        private static string engine_name = string.Empty;
 
         //
         //ipaddressとportを設定する
-        public VoicevoxEngineApi(string ipaddress, int port)
+        public VoicevoxEngineApi(string ipaddress, int port, string name)
         {
-            if (Tools.IsNullOrEmpty(ipaddress)) { throw new ArgumentNullException(nameof(ipaddress)); }
-            if (Tools.IsNotPortNumber(port)) { throw new Exception($"{nameof(port)}がポート番号でない、もしくはNullです。"); }
+            if (Tools.IsNullOrEmpty(ipaddress)) { throw new ArgumentNullException("ipaddress"); }
+            if (Tools.IsNotPortNumber(port)) { throw new Exception($"port がポート番号でない、もしくはNullです。"); }
+            if (Tools.IsNullOrEmpty(name)) { throw new ArgumentNullException("name"); }
 
             engine_ipaddress = ipaddress;
             engine_port = port;
+            engine_name = name;
+        }
+
+        public void Info() 
+        {
+            Console.WriteLine($"[{engine_name}]:{engine_ipaddress}:{engine_port}");
         }
 
         //
         //話者リストをjson形式で取得する
         public string GetSpeakersJson()
         {
+            Console.WriteLine("["+ engine_name +"]:" +engine_ipaddress + ":" + engine_port);
+
             if (Tools.IsNullOrEmpty(engine_ipaddress)) { throw new Exception($"{nameof(engine_ipaddress)}がNullもしくは空です。"); }
             if (Tools.IsNotPortNumber(engine_port)) { throw new Exception($"{nameof(engine_port)}が不正な値({engine_port})です。"); }
 
@@ -76,6 +86,7 @@ namespace voicevox_discord
         //Wavファイルを取得してStreamで返す
         public Stream GetWavFromApi(string id, string text)
         {
+            Console.WriteLine("[" + engine_name + "]:" + engine_ipaddress + ":" + engine_port);
             ManualResetEvent waitforwav = new ManualResetEvent(false);
             Stream? wav = null;
 
