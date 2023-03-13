@@ -1,3 +1,4 @@
 # discord_template
 
-discordからvoicevoxを遊ぶためのbot
+discordからvoicevoxを遊ぶためのbot  
+coeiroinkみたいなvoicevox_engineを派生させたエンジンも使えるようになったよ！！
