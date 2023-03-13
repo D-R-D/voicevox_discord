@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using CliWrap;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using System.Configuration;
@@ -77,7 +78,6 @@ namespace voicevox_discord
 
         //
         //スラッシュコマンドのイベント処理
-        [Command(RunMode=RunMode.Async)]
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
             _ = Task.Run(async () =>
@@ -139,6 +139,11 @@ namespace voicevox_discord
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
+                    if (command.HasResponded)
+                    {
+                        await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
+                        return;
+                    }
                     await command.RespondAsync(ex.Message);
                 }
             });
@@ -155,7 +160,6 @@ namespace voicevox_discord
                 try
                 {
                     SelectMenuController selectMenuController = new SelectMenuController(arg);
-
                     string[] commandid = arg.Data.CustomId.Split(':'); //speaker:corename:commandmode
                     string[] selecteditem = string.Join(", ", arg.Data.Values).Split('@'); //コマンド@コマンド名
                     bool commandmode = false;
@@ -196,6 +200,11 @@ namespace voicevox_discord
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
+                    if (arg.HasResponded)
+                    {
+                        await arg.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
+                        return;
+                    }
                     await arg.RespondAsync(ex.Message);
                 }
             });
