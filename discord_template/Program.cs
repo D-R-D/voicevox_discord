@@ -140,6 +140,11 @@ namespace voicevox_discord
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
+                    if (command.HasResponded)
+                    {
+                        await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
+                        return;
+                    }
                     await command.RespondAsync(ex.Message);
                 }
             });
@@ -204,6 +209,11 @@ namespace voicevox_discord
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
+                    if (arg.HasResponded)
+                    {
+                        await arg.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
+                        return;
+                    }
                     await arg.RespondAsync(ex.Message);
                 }
             });
