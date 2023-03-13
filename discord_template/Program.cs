@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using CliWrap;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using System.Configuration;
@@ -8,9 +9,9 @@ namespace voicevox_discord
     class Program
     {
         public static AppSettingsReader reader = new AppSettingsReader();
-        private static Dictionary<string, Dictionary<string, object>> core_speakers = new();
-        private static Dictionary<string, List<Dictionary<string, object>>> paged_core_speakers = new();
-        private static Dictionary<string, KeyValuePair<string, int>> enginedictionary = new();
+        public static Dictionary<string, Dictionary<string, object>> core_speakers { get; private set; } = new();
+        public static Dictionary<string, List<Dictionary<string, object>>> paged_core_speakers { get; private set; } = new();
+        public static Dictionary<string, KeyValuePair<string, int>> enginedictionary { get; private set; } = new();
 
         private static AudioService audioService = new AudioService();
 
@@ -95,22 +96,25 @@ namespace voicevox_discord
 
                         return;
                     }
+                    //
+                    //guildidの登録処理
                     if (commandname == "voicechannel")
                     {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
 
-                        //initengine
-                        string enginename = audioService.name_id_pair.Key.Split(":")[0];
-                        VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[enginename].Key, enginedictionary[enginename].Value, enginename);
-                        audioService.initengine(voicevoxEngineApi);
-
-                        bool setvalueflag = await audioService!.CommandRunner(command, firstval);
-
-                        if (setvalueflag)
+                        if(!command.GuildId.HasValue)
                         {
                             await command.DeleteOriginalResponseAsync();
+                            return;
                         }
+                        ulong guildid = command.GuildId.Value;
+
+                        //initaudioservice
+                        audioService.initGuildService(guildid);
+
+                        //join
+                        await audioService!.JoinOperation(command, firstval);
 
                         return;
                     }
@@ -128,9 +132,6 @@ namespace voicevox_discord
                     {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
-                        string enginename = audioService.name_id_pair.Key.Split(":")[0];
-
-                        VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[enginename].Key, enginedictionary[enginename].Value, enginename);
                         await audioService.TextReader(command, firstval);
 
                         return;
@@ -177,16 +178,23 @@ namespace voicevox_discord
 
                             await arg.RespondWithModalAsync(builder.Build());
                         }
+                        //
+                        //guildidの登録処理
                         else
                         {
+                            if (!arg.GuildId.HasValue)
+                            {
+                                await arg.DeleteOriginalResponseAsync();
+
+                                return;
+                            }
+                            ulong guildid = arg.GuildId.Value;
+
+                            //setspeaker
                             string speakername = selecteditem[1];
                             string stylename = selecteditem[2];
                             int speakerid = int.Parse(((Dictionary<string, string>)core_speakers[commandid[1]][speakername])[stylename]);
-                            audioService!.SetSpeaker($"{commandid[1]}:{speakername}:{stylename}", speakerid);
-                            //initengine
-                            string enginename = audioService.name_id_pair.Key.Split(":")[0];
-                            VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(enginedictionary[enginename].Key, enginedictionary[enginename].Value, enginename);
-                            audioService.initengine(voicevoxEngineApi);
+                            audioService.SetSpeaker(guildid, speakername, stylename, speakerid, commandid[1]);
 
                             await arg.RespondAsync($"話者を[{commandid[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerid})]に変更しました");
                         }
