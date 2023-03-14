@@ -4,50 +4,15 @@ using Discord.Audio;
 using Discord.WebSocket;
 using NAudio.Wave;
 using System.Diagnostics;
+using System.Security.Permissions;
 using System.Xml.Linq;
 
 namespace voicevox_discord
 {
-    internal class AudioServiseData
-    {
-        public string name { get; private set; } = "四国めたん";
-        public string engine_name { get; private set; } = "voicevox";
-        public string style_name { get; private set; } = "ノーマル";
-        public int id { get; private set; } = 2;
-
-        public VoicevoxEngineApi? voicevoxEngineApi { get; private set; } = null;
-
-        public IVoiceChannel? voiceChannel { get; set; } = null;
-        public IAudioClient? audioclient { get; set; } = null;
-        public AudioOutStream? audiooutstream { get; set; } = null;
-
-        public AudioServiseData()
-        {
-            SetEngine(SpeakerInfo.GetEngineApiFromengine_name(engine_name));
-        }
-
-        public void SetEngine(VoicevoxEngineApi _voicevoxEngineApi)
-        {
-            voicevoxEngineApi = _voicevoxEngineApi;
-        }
-
-        public void SetSpeakerInfo(string _name, string _style_name, int _id)
-        {
-            style_name = _style_name;
-            name = _name;
-            id = _id;
-        }
-
-        public void SetEngineName(string _engine_name)
-        {
-            engine_name = _engine_name;
-        }
-    }
-
     internal class AudioService
     {   
-        //internal Dictionary<ulong, AudioServiseData> GuildAudioService = new Dictionary<ulong, AudioServiseData>();
-        internal List<KeyValuePair<ulong, AudioServiseData>> GuildAudioService = new();
+        //internal Dictionary<ulong, AudioServiceData> GuildAudioService = new Dictionary<ulong, AudioServiceData>();
+        internal List<KeyValuePair<ulong, AudioServiceData>> GuildAudioService = new();
 
         public void CheckEngineApi()
         {
@@ -64,7 +29,7 @@ namespace voicevox_discord
         /// <param name="guildid"></param>
         public void initGuildService(ulong guildid)
         {
-            KeyValuePair<ulong, AudioServiseData> AudioService = new(guildid, new AudioServiseData());
+            KeyValuePair<ulong, AudioServiceData> AudioService = new(guildid, new AudioServiceData());
             GuildAudioService.Add(AudioService);
         }
 
@@ -74,7 +39,7 @@ namespace voicevox_discord
         /// <param name="guildid"></param>
         private bool CheckGuildService(ulong guildid)
         {
-            foreach(KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            foreach(KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
             {
                 if(AudioService.Key == guildid)
                 {
@@ -97,8 +62,8 @@ namespace voicevox_discord
                 initGuildService(guildid);
             }
 
-            KeyValuePair<ulong, AudioServiseData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            KeyValuePair<ulong, AudioServiceData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
             {
                 if (AudioService.Key == guildid)
                 {
@@ -123,15 +88,15 @@ namespace voicevox_discord
             {
                 initGuildService(guildid);
             }
-            KeyValuePair<ulong, AudioServiseData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            KeyValuePair<ulong, AudioServiceData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
             {
                 if (AudioService.Key == guildid)
                 {
                     audioService = AudioService;
                 }
             }
-            AudioServiseData audioServiseData = audioService.Value;
+            AudioServiceData audioServiceData = audioService.Value;
 
             if (firstval == "join")
             {
@@ -145,18 +110,19 @@ namespace voicevox_discord
                     }
 
                     bool rejoin = false;
-                    if (audioServiseData.audioclient != null)
+                    if (audioServiceData.audioclient != null)
                     {
-                        if (audioServiseData.audioclient.ConnectionState == ConnectionState.Connected)
+                        if (audioServiceData.audioclient.ConnectionState == ConnectionState.Connected)
                         {
                             rejoin = true;
 
-                            await audioServiseData.audioclient.StopAsync();
-                            audioServiseData.voiceChannel = null;
+                            await audioServiceData.audioclient.StopAsync();
+                            audioServiceData.speaking = false;
+                            audioServiceData.voiceChannel = null;
                         }
                     }
-                    audioServiseData.voiceChannel = ((IVoiceState)command.User).VoiceChannel;
-                    await JoinChannel(rejoin, audioServiseData, guildid);
+                    audioServiceData.voiceChannel = ((IVoiceState)command.User).VoiceChannel;
+                    await JoinChannel(rejoin, audioServiceData, guildid);
                 }
                 catch (Exception ex)
                 {
@@ -167,13 +133,13 @@ namespace voicevox_discord
 
             if (firstval == "leave")
             {
-                if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
+                if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
                 {
                     await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
                 await LeaveAsync(guildid);
-                audioServiseData.voiceChannel = null;
+                audioServiceData.voiceChannel = null;
 
                 return;
             }
@@ -181,7 +147,7 @@ namespace voicevox_discord
             await command.DeleteOriginalResponseAsync();
         }
 
-        private async Task JoinChannel(bool rejoin, AudioServiseData audioServiseData, ulong guildid)
+        private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid)
         {
             audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync().ConfigureAwait(false);
             audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed);
@@ -217,15 +183,15 @@ namespace voicevox_discord
             {
                 initGuildService(guildid);
             }
-            KeyValuePair<ulong, AudioServiseData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            KeyValuePair<ulong, AudioServiceData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
             {
                 if (AudioService.Key == guildid)
                 {
                     audioService = AudioService;
                 }
             }
-            AudioServiseData audioServiseData = audioService.Value;
+            AudioServiceData audioServiseData = audioService.Value;
             await audioServiseData.audioclient!.StopAsync();
 
             audioServiseData.voiceChannel = null;
@@ -253,20 +219,20 @@ namespace voicevox_discord
         public void SetSpeaker(ulong guildid, string name, string style_name, int id, string engine_name)
         {
             setnewEngine(guildid, engine_name);
-            KeyValuePair<ulong, AudioServiseData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            KeyValuePair<ulong, AudioServiceData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
             {
                 if (AudioService.Key == guildid)
                 {
                     audioService = AudioService;
                 }
             }
-            AudioServiseData audioServiseData = audioService.Value;
-            audioServiseData.SetSpeakerInfo(name, style_name, id);
+            AudioServiceData audioServiceData = audioService.Value;
+            audioServiceData.SetSpeakerInfo(name, style_name, id);
 
             Console.WriteLine(name + " : " + id);
 
-            if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
+            if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
             {
                 return;
             }
@@ -275,13 +241,80 @@ namespace voicevox_discord
             {
                 try
                 {
-                    await PlayAudio(audioServiseData, guildid, $"変わりまして{audioServiseData.name}です。{audioServiseData.style_name}な感じで行きますね。");
+                    await PlayAudio(audioServiceData, guildid, $"変わりまして{audioServiceData.name}です。{audioServiceData.style_name}な感じで行きますね。");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
                 }
             });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="audioServiseData"></param>
+        public void Chat_ChangeInitialMessage(AudioServiceData audioServiseData)
+        {
+            audioServiseData.chatGpt!.SetInitialMessage($"以降の会話では{audioServiseData.name}として{audioServiseData.style_name}な感じにふるまってください。");
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="OPENAI_APIKEY"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public async Task Chat(SocketSlashCommand command, string OPENAI_APIKEY, string text)
+        {
+            if (!command.GuildId.HasValue)
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content = "悪いな、私はguild専用なんだ"; });
+
+                return;
+            }
+            ulong guildid = command.GuildId.Value;
+            if (!CheckGuildService(guildid))
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content = "ギルドIDが登録されてないね、/setspeakerとか/voicechannelをためしてみて！！"; });
+
+                return;
+            }
+            KeyValuePair<ulong, AudioServiceData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
+            {
+                if (AudioService.Key == guildid)
+                {
+                    audioService = AudioService;
+                }
+            }
+            AudioServiceData audioServiceData = audioService.Value;
+
+            if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
+
+                return;
+            }
+
+            if(audioServiceData.chatGpt == null)
+            {
+                audioServiceData.initChatGpt(OPENAI_APIKEY);
+            }
+            audioServiceData.setInitialMessage();
+
+            try
+            {
+                string response = await audioServiceData.chatGpt!.RequestSender(text);
+                await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
+                await PlayAudio(audioServiceData, guildid, response);
+            }
+            catch(Exception ex)
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content = $"{ex.Message}\n何故だ！\n俺にも分からない！！\n答えろ！！\n教えてくれ！！\n答えろ！！！\nボスぅぅ！！！！"; });
+                Console.WriteLine(ex.ToString());
+            }
         }
 
         /// <summary>
@@ -305,15 +338,15 @@ namespace voicevox_discord
 
                 return;
             }
-            KeyValuePair<ulong, AudioServiseData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiseData> AudioService in GuildAudioService)
+            KeyValuePair<ulong, AudioServiceData> audioService = new();
+            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
             {
                 if (AudioService.Key == guildid)
                 {
                     audioService = AudioService;
                 }
             }
-            AudioServiseData audioServiseData = audioService.Value;
+            AudioServiceData audioServiseData = audioService.Value;
 
             if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
             {
@@ -341,8 +374,14 @@ namespace voicevox_discord
         }
 
 
-        private async Task PlayAudio(AudioServiseData audioServiseData, ulong guildid, string text)
+        private async Task PlayAudio(AudioServiceData audioServiseData, ulong guildid, string text)
         {
+            if(audioServiseData.speaking == true)
+            {
+                return;
+            }
+            audioServiseData.speaking = true;
+
             string audiofile = $"{Directory.GetCurrentDirectory()}/ffmpeg/audiofile/{guildid}.wav";
             audioServiseData.voicevoxEngineApi!.Info();
             using (Stream wavstream = audioServiseData.voicevoxEngineApi!.GetWavFromApi(audioServiseData.id.ToString(), text))
@@ -362,6 +401,8 @@ namespace voicevox_discord
                 //WaveFileWriter.CreateWaveFile("pcmtest.wav", s);
             }
             process.Kill();
+
+            audioServiseData.speaking = false;
         }
 
         private Process CreateStream(ulong guildid)

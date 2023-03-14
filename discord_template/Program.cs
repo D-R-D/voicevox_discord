@@ -14,6 +14,7 @@ namespace voicevox_discord
         public static Dictionary<string, KeyValuePair<string, int>> enginedictionary { get; private set; } = new();
 
         private static AudioService audioService = new AudioService();
+        private static string? OPENAI_APIKEY = null;
 
         private DiscordSocketClient? _client;
         private static CommandService? _commands;
@@ -22,6 +23,8 @@ namespace voicevox_discord
         {
             InitDirectory initDirectory = new InitDirectory();
             initDirectory.init();
+
+            OPENAI_APIKEY = reader.GetValue("OPENAI_APIKEY", typeof(string)).ToString();
 
             //configから各IDを取得
             Ids ids = new Ids(reader);
@@ -87,7 +90,7 @@ namespace voicevox_discord
                 {
                     string commandname = command.Data.Name;
 
-                    if (commandname != "voicechannel" && commandname != "setspeaker" && commandname != "read")
+                    if (commandname != "voicechannel" && commandname != "setspeaker" && commandname != "read" && commandname != "chat")
                     {
                         var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[commandname], "0", commandname, false);
                         var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
@@ -134,6 +137,15 @@ namespace voicevox_discord
                         await audioService.TextReader(command, firstval);
 
                         return;
+                    }
+
+                    if(commandname == "chat")
+                    {
+                        audioService.CheckEngineApi();
+
+                        await command.DeferAsync();
+                        string firstval = command.Data.Options.First().Value.ToString()!;
+                        await audioService.Chat(command, OPENAI_APIKEY!, firstval);
                     }
                 }
                 catch (Exception ex)

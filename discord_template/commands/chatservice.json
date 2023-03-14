@@ -1,0 +1,12 @@
+{
+  "name": "chat",
+  "description": "chatcommand using chatgpt",
+  "options": [
+    {
+      "name": "text",
+      "description": "control command",
+      "type": 3,
+      "required": true
+    }
+  ]
+}
