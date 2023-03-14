@@ -1,10 +1,5 @@
-﻿using Discord.Audio;
-using Discord;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Discord;
+using Discord.Audio;
 
 namespace voicevox_discord
 {
@@ -16,7 +11,16 @@ namespace voicevox_discord
         public int id { get; private set; } = 2;
         public bool speaking { get; set; } = false;
 
-        public ChatGpt? chatGpt { get; private set; } = null;
+        private ChatGpt? _ChatGPT;
+        public ChatGpt ChatGPT {
+            get {
+                if (_ChatGPT == null) {
+                    _ChatGPT = new ChatGpt(Settings.Shared.m_OpenAIKey);
+                    _ChatGPT!.SetInitialMessage($"あなたはDiscordのチャットbotです。{name}として{style_name}な感じに振る舞いなさい。");
+                }
+                return _ChatGPT;
+            }
+        }
         public VoicevoxEngineApi? voicevoxEngineApi { get; private set; } = null;
 
         public IVoiceChannel? voiceChannel { get; set; } = null;
@@ -25,7 +29,7 @@ namespace voicevox_discord
 
         public AudioServiceData()
         {
-            SetEngine(SpeakerInfo.GetEngineApiFromengine_name(engine_name));
+            SetEngine(SpeakerInfo.GetEngineApiFromEngineName(engine_name));
         }
 
         public void SetEngine(VoicevoxEngineApi _voicevoxEngineApi)
@@ -43,17 +47,6 @@ namespace voicevox_discord
         public void SetEngineName(string _engine_name)
         {
             engine_name = _engine_name;
-        }
-
-        public void initChatGpt(string OPENAI_APIKEY)
-        {
-            chatGpt = new ChatGpt(OPENAI_APIKEY);
-            setInitialMessage();
-        }
-
-        public void setInitialMessage()
-        {
-            chatGpt!.SetInitialMessage($"あなたはDiscordのチャットbotです。{name}として{style_name}な感じに振る舞いなさい。");
         }
     }
 }
