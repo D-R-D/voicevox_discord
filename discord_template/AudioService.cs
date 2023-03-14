@@ -11,40 +11,25 @@ namespace voicevox_discord
 {
     internal class AudioService
     {   
-        //internal Dictionary<ulong, AudioServiceData> GuildAudioService = new Dictionary<ulong, AudioServiceData>();
-        internal List<KeyValuePair<ulong, AudioServiceData>> GuildAudioService = new();
-
-        public void CheckEngineApi()
-        {
-            foreach(var item in GuildAudioService)
-            {
-                Console.Write($"({item.Key})");
-                item.Value.voicevoxEngineApi!.Info();
-            }
-        }
+        internal Dictionary<ulong, AudioServiceData> GuildAudioService = new Dictionary<ulong, AudioServiceData>();
+        //internal List<KeyValuePair<ulong, AudioServiceData>> GuildAudioService = new();
 
         /// <summary>
         /// setting
         /// </summary>
-        /// <param name="guildid"></param>
         public void initGuildService(ulong guildid)
         {
-            KeyValuePair<ulong, AudioServiceData> AudioService = new(guildid, new AudioServiceData());
-            GuildAudioService.Add(AudioService);
+            GuildAudioService.Add(guildid, new AudioServiceData());
         }
 
         /// <summary>
         /// setting
         /// </summary>
-        /// <param name="guildid"></param>
         private bool CheckGuildService(ulong guildid)
         {
-            foreach(KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
+            if (GuildAudioService.ContainsKey(guildid))
             {
-                if(AudioService.Key == guildid)
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
@@ -53,50 +38,27 @@ namespace voicevox_discord
         /// <summary>
         /// setting
         /// </summary>
-        /// <param name="guildid"></param>
-        /// <param name="_voicevoxEngineApi"></param>
         private void setnewEngine(ulong guildid, string _engine_name)
         {
             if (!CheckGuildService(guildid))
             {
                 initGuildService(guildid);
             }
-
-            KeyValuePair<ulong, AudioServiceData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
-            {
-                if (AudioService.Key == guildid)
-                {
-                    audioService = AudioService;
-                }
-            }
-
-            audioService.Value.SetEngine(SpeakerInfo.GetEngineApiFromengine_name(_engine_name));
-            audioService.Value.SetEngineName(_engine_name);
+            GuildAudioService[guildid].SetEngine(SpeakerInfo.GetEngineApiFromengine_name(_engine_name));
+            GuildAudioService[guildid].SetEngineName(_engine_name);
         }
 
         /// <summary>
         /// setting
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="firstval"></param>
-        /// <returns></returns>
         public async Task JoinOperation(SocketSlashCommand command, string firstval)
         {
             ulong guildid = command.GuildId!.Value;
-            if (!CheckGuildService(guildid))
+            if (GuildAudioService.ContainsKey(guildid))
             {
                 initGuildService(guildid);
             }
-            KeyValuePair<ulong, AudioServiceData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
-            {
-                if (AudioService.Key == guildid)
-                {
-                    audioService = AudioService;
-                }
-            }
-            AudioServiceData audioServiceData = audioService.Value;
+            AudioServiceData audioServiceData = GuildAudioService[guildid];
 
             if (firstval == "join")
             {
@@ -176,7 +138,6 @@ namespace voicevox_discord
         /// <summary>
         /// 
         /// </summary>
-        /// <returns></returns>
         private async Task LeaveAsync(ulong guildid)
         {
             if (!CheckGuildService(guildid))
@@ -201,8 +162,6 @@ namespace voicevox_discord
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="arg"></param>
-        /// <returns></returns>
         private async Task Audioclient_Disconnected(Exception arg)
         {
             await Task.CompletedTask;
@@ -211,26 +170,11 @@ namespace voicevox_discord
         /// <summary>
         /// setting
         /// </summary>
-        /// <param name="guildid"></param>
-        /// <param name="engine_name"></param>
-        /// <param name="name"></param>
-        /// <param name="style_name"></param>
-        /// <param name="id"></param>
         public void SetSpeaker(ulong guildid, string name, string style_name, int id, string engine_name)
         {
             setnewEngine(guildid, engine_name);
-            KeyValuePair<ulong, AudioServiceData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
-            {
-                if (AudioService.Key == guildid)
-                {
-                    audioService = AudioService;
-                }
-            }
-            AudioServiceData audioServiceData = audioService.Value;
+            AudioServiceData audioServiceData = GuildAudioService[guildid];
             audioServiceData.SetSpeakerInfo(name, style_name, id);
-
-            Console.WriteLine(name + " : " + id);
 
             if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
             {
@@ -253,7 +197,6 @@ namespace voicevox_discord
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="audioServiseData"></param>
         public void Chat_ChangeInitialMessage(AudioServiceData audioServiseData)
         {
             audioServiseData.chatGpt!.SetInitialMessage($"以降の会話では{audioServiseData.name}として{audioServiseData.style_name}な感じにふるまってください。");
@@ -262,34 +205,16 @@ namespace voicevox_discord
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="OPENAI_APIKEY"></param>
-        /// <param name="text"></param>
-        /// <returns></returns>
         public async Task Chat(SocketSlashCommand command, string OPENAI_APIKEY, string text)
         {
-            if (!command.GuildId.HasValue)
-            {
-                await command.ModifyOriginalResponseAsync(m => { m.Content = "悪いな、私はguild専用なんだ"; });
-
-                return;
-            }
-            ulong guildid = command.GuildId.Value;
+            ulong guildid = command.GuildId!.Value;
             if (!CheckGuildService(guildid))
             {
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "ギルドIDが登録されてないね、/setspeakerとか/voicechannelをためしてみて！！"; });
 
                 return;
             }
-            KeyValuePair<ulong, AudioServiceData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
-            {
-                if (AudioService.Key == guildid)
-                {
-                    audioService = AudioService;
-                }
-            }
-            AudioServiceData audioServiceData = audioService.Value;
+            AudioServiceData audioServiceData = GuildAudioService[guildid];
 
             if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
             {
@@ -320,33 +245,16 @@ namespace voicevox_discord
         /// <summary>
         /// use
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="text"></param>
-        /// <returns></returns>
         public async Task TextReader(SocketSlashCommand command, string text)
         {
-            if (!command.GuildId.HasValue)
-            {
-                await command.ModifyOriginalResponseAsync(m => { m.Content = "悪いな、私はguild専用なんだ"; });
-
-                return;
-            }
-            ulong guildid = command.GuildId.Value;
+            ulong guildid = command.GuildId!.Value;
             if (!CheckGuildService(guildid))
             {
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "ギルドIDが登録されてないね、/setspeakerとか/voicechannelをためしてみて！！"; });
 
                 return;
             }
-            KeyValuePair<ulong, AudioServiceData> audioService = new();
-            foreach (KeyValuePair<ulong, AudioServiceData> AudioService in GuildAudioService)
-            {
-                if (AudioService.Key == guildid)
-                {
-                    audioService = AudioService;
-                }
-            }
-            AudioServiceData audioServiseData = audioService.Value;
+            AudioServiceData audioServiseData = GuildAudioService[guildid];
 
             if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
             {

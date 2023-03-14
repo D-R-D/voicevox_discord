@@ -1,9 +1,5 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace voicevox_discord
 {
@@ -23,7 +19,6 @@ namespace voicevox_discord
         public int completion_tokens { get; set; }
         public int total_tokens { get; set; }
     }
-
     public class Message
     {
         public string? role { get; set; }
