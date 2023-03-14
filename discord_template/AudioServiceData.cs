@@ -9,14 +9,6 @@ namespace voicevox_discord
 
         public string Name { get; private set; } = "四国めたん";
         public string EngineName { get; private set; } = DefaultEngineName;
-        public string CreditName {
-            get {
-                return Name switch {
-                    "もち子さん" => "もち子(cv 明日葉よもぎ)",
-                    _ => Name
-                };
-            }
-        }
         public string StyleName { get; private set; } = "ノーマル";
         public int Id { get; private set; } = 2;
         public bool m_IsSpeaking = false;

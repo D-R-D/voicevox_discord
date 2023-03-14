@@ -2,6 +2,7 @@
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using System.Xml.Linq;
 
 namespace voicevox_discord
 {
@@ -190,21 +191,25 @@ namespace voicevox_discord
         private static async Task ModalHandler(SocketModal modal)
         {
             _ = Task.Run(async () => {
-                await modal.RespondAsync("PROCESSING...");
-
-
+                await modal.DeferAsync();
+                string[] commandid = modal.Data.CustomId.Split(':');
+                var command = commandid[0];
+                var engineName = commandid[1];
+                Console.WriteLine(command + ":" + engineName);
                 var guildId = modal.GuildId!.Value;
-                var speaker = s_AudioService.GetOrCreateAudioServiceData(guildId);
-                var engineName = speaker.EngineName;
 
                 try {
-                    if (modal.Data.CustomId == "speak_text") {
+                    if (command == "speak_text") {
                         VoicevoxEngineApi voicevoxEngineApi = Settings.Shared.m_EngineDictionary[engineName];
                         List<SocketMessageComponentData> components = modal.Data.Components.ToList();
-                        var id = s_AudioService.GetOrCreateAudioServiceData(guildId).Id;
+                        var speakerValues = components.First().CustomId.Split("@");
+                        var speakerName = speakerValues[1];
+                        var styleName = speakerValues[2];
+
+                        var speakerId = await voicevoxEngineApi.GetSpeakerId(speakerName, styleName);
                         string text = components.First().Value;
                         //VoicevoxEngineからWavファイルをもらう
-                        Stream stream = await voicevoxEngineApi!.GetWavFromApi(id, text);
+                        Stream stream = await voicevoxEngineApi!.GetWavFromApi(speakerId, text);
 
                         //ファイル添付に必用な処理
                         FileAttachment fa = new FileAttachment(stream, text.Replace("\n", "") + ".wav");
@@ -213,9 +218,7 @@ namespace voicevox_discord
                         Optional<IEnumerable<FileAttachment>> optional = new Optional<IEnumerable<FileAttachment>>(flis);
 
                         //話者"もち子さん"はクレジットに記載する名前が話者リストの名前と違うので別にクレジット記載用の処理を追加
-                        string content = $"{modal.User.Mention}\n話者[ {engineName}:{speaker.CreditName} ]\nstyle[ {speaker.StyleName} ( id:{id} ) ]\n";
-
-
+                        string content = $"{modal.User.Mention}\n話者[ {engineName}:{ToCreditName(speakerName)} ]\nstyle[ {styleName} ( id:{speakerId} ) ]\n";
                         content += $"受け取った文字列: {(text.Length > 100 ? $"{text.Substring(0, 100)} ..." : text.Substring(0, text.Length))}"; //長さ100以上のテキストを切り捨てる
 
                         await modal.ModifyOriginalResponseAsync(m => {
@@ -230,6 +233,14 @@ namespace voicevox_discord
             });
 
             await Task.CompletedTask;
+        }
+
+        private static string ToCreditName(string name)
+        {
+            return name switch {
+                "もち子さん" => "もち子(cv 明日葉よもぎ)",
+                _ => name
+            };
         }
     }
 }
