@@ -7,14 +7,7 @@ namespace voicevox_discord
 {
     class Program
     {
-
-        public static Dictionary<string, Dictionary<string, object>> s_CoreSpeakers { get; private set; } = new();
-        public static Dictionary<string, List<Dictionary<string, object>>> s_PagedCoreSpeakers { get; private set; } = new();
-        public static Dictionary<string, KeyValuePair<string, int>> s_EngineDictionary { get; private set; } = new();
-
         private static AudioService s_AudioService = new AudioService();
-
-
         private DiscordSocketClient? _client;
         private static CommandService? _commands;
 
@@ -26,9 +19,6 @@ namespace voicevox_discord
             //コマンドファイルからjson形式でコマンドを取得・設定する
             CommandSender.RegisterGuildCommands();
             Console.WriteLine("CommandSender SUCCESS!!");
-
-            EngineList engineList = new EngineList();
-            engineList.GetListFromXmlfile("voicevox_engine_list.xml", s_EngineDictionary, s_CoreSpeakers, s_PagedCoreSpeakers);
 
             _ = new Program().MainAsync();
 
@@ -76,13 +66,12 @@ namespace voicevox_discord
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
             _ = Task.Run(async () => {
-                try
-                {
-                    if (!command.GuildId.HasValue)
-                    {
+                try {
+                    if (!command.GuildId.HasValue) {
                         await command.RespondAsync("ごめんね、guild専用なんだ");
                         return;
                     }
+                    ulong guildid = command.GuildId.Value;
 
                     SelectMenuBuilder? menuBuilder = null;
                     ComponentBuilder? builder = null;
@@ -90,35 +79,25 @@ namespace voicevox_discord
 
                     //
                     //guildidの登録処理
-                    if (commandname == "voicechannel")
-                    {
+                    if (commandname == "voicechannel") {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
-
-                        if (!command.GuildId.HasValue)
-                        {
-                            await command.DeleteOriginalResponseAsync();
-                            return;
-                        }
-                        ulong guildid = command.GuildId.Value;
 
                         //join
                         await s_AudioService!.JoinOperation(command, firstval);
 
                         return;
                     }
-                    if (commandname == "setspeaker")
-                    {
+                    if (commandname == "setspeaker") {
                         string firstval = command.Data.Options.First().Value.ToString()!;
-                        menuBuilder = SelectMenuEditor.CreateSpeakerMenu(s_PagedCoreSpeakers[firstval], "0", firstval, true);
+                        menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(firstval, 0, true);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
 
                         return;
                     }
-                    if (commandname == "read")
-                    {
+                    if (commandname == "read") {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await s_AudioService.TextReader(command, firstval);
@@ -126,8 +105,7 @@ namespace voicevox_discord
                         return;
                     }
 
-                    if (commandname == "chat")
-                    {
+                    if (commandname == "chat") {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await s_AudioService.Chat(command, firstval);
@@ -135,18 +113,15 @@ namespace voicevox_discord
                         return;
                     }
 
-                    menuBuilder = SelectMenuEditor.CreateSpeakerMenu(s_PagedCoreSpeakers[commandname], "0", commandname, false);
+                    menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(commandname, 0, false);
                     builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                     await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
 
                     return;
-                }
-                catch (Exception ex)
-                {
+                } catch (Exception ex) {
                     Console.WriteLine(ex.ToString());
-                    if (command.HasResponded)
-                    {
+                    if (command.HasResponded) {
                         await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                         return;
                     }
@@ -166,14 +141,14 @@ namespace voicevox_discord
                     SelectMenuController selectMenuController = new SelectMenuController(arg);
 
                     string[] commandid = arg.Data.CustomId.Split(':'); //speaker:corename:commandmode
-                    string[] selecteditem = string.Join(", ", arg.Data.Values).Split('@'); //コマンド@コマンド名
+                    string[] selecteditem = arg.Data.Values.First().Split('@'); //コマンド@コマンド名
                     bool commandmode = false;
                     if (commandid[2] == "1") { commandmode = true; }
 
                     if (commandid[0] == "speaker") {
-                        KeyValuePair<string, ComponentBuilder> respondcontent = selectMenuController.BuildSelectmenu(commandid, commandmode, s_PagedCoreSpeakers, s_CoreSpeakers);
+                        var respondcontent = await selectMenuController.BuildSelectmenu(commandid, commandmode);
 
-                        await arg.RespondAsync(respondcontent.Key, components: respondcontent.Value.Build(), ephemeral: true);
+                        await arg.RespondAsync(respondcontent.label, components: respondcontent.builder.Build(), ephemeral: true);
                     } else if (commandid[0] == "speaker_id") {
                         string value = string.Join(", ", arg.Data.Values);
                         if (!commandmode) {
@@ -190,10 +165,10 @@ namespace voicevox_discord
                             //setspeaker
                             string speakername = selecteditem[1];
                             string stylename = selecteditem[2];
-                            int speakerid = int.Parse(((Dictionary<string, string>)s_CoreSpeakers[commandid[1]][speakername])[stylename]);
-                            s_AudioService.SetSpeaker(guildid, speakername, stylename, speakerid, commandid[1]);
+                            int speakerId = await Settings.Shared.m_EngineDictionary[commandid[1]].GetSpeakerId(speakername, stylename);
+                            s_AudioService.SetSpeaker(guildid, speakername, stylename, speakerId, commandid[1]);
 
-                            await arg.RespondAsync($"話者を[{commandid[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerid})]に変更しました");
+                            await arg.RespondAsync($"話者を[{commandid[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerId})]に変更しました");
                         }
                     }
 
@@ -216,22 +191,20 @@ namespace voicevox_discord
         {
             _ = Task.Run(async () => {
                 await modal.RespondAsync("PROCESSING...");
-                string[] commandid = modal.Data.CustomId.Split(':');
 
-                Console.WriteLine(commandid[0] + ":" + commandid[1]);
+
+                var guildId = modal.GuildId!.Value;
+                var speaker = s_AudioService.GetOrCreateAudioServiceData(guildId);
+                var engineName = speaker.EngineName;
 
                 try {
-                    if (commandid[0] == "speak_text") {
-                        VoicevoxEngineApi voicevoxEngineApi = new VoicevoxEngineApi(s_EngineDictionary[commandid[1]].Key, s_EngineDictionary[commandid[1]].Value, commandid[1]);
+                    if (modal.Data.CustomId == "speak_text") {
+                        VoicevoxEngineApi voicevoxEngineApi = Settings.Shared.m_EngineDictionary[engineName];
                         List<SocketMessageComponentData> components = modal.Data.Components.ToList();
-
-                        //話者情報と入力されたテキストを取り出す
-                        string speakervalue = components.First().CustomId.ToString();
-                        string text = components.First(x => x.CustomId == speakervalue).Value;
-                        string[] speakervalues = speakervalue.Split('@');
-                        string id = ((Dictionary<string, string>)s_CoreSpeakers[commandid[1]][speakervalues[1]])[speakervalues[2]];
+                        var id = s_AudioService.GetOrCreateAudioServiceData(guildId).Id;
+                        string text = components.First().Value;
                         //VoicevoxEngineからWavファイルをもらう
-                        Stream stream = voicevoxEngineApi!.GetWavFromApi(id, text);
+                        Stream stream = await voicevoxEngineApi!.GetWavFromApi(id, text);
 
                         //ファイル添付に必用な処理
                         FileAttachment fa = new FileAttachment(stream, text.Replace("\n", "") + ".wav");
@@ -240,8 +213,8 @@ namespace voicevox_discord
                         Optional<IEnumerable<FileAttachment>> optional = new Optional<IEnumerable<FileAttachment>>(flis);
 
                         //話者"もち子さん"はクレジットに記載する名前が話者リストの名前と違うので別にクレジット記載用の処理を追加
-                        string content = "";
-                        if (speakervalues[1] != "もち子さん") { content = $"{modal.User.Mention}\n話者[ {commandid[1].ToUpper()}:{speakervalues[1]} ]\nstyle[ {speakervalues[2]} ( id:{id} ) ]\n"; } else { content = $"{modal.User.Mention}\n話者[ {commandid[1].ToUpper()}:もち子(cv 明日葉よもぎ) ]\nstyle[ {speakervalues[2]} ( id:{id} ) ]\n"; }
+                        string content = $"{modal.User.Mention}\n話者[ {engineName}:{speaker.CreditName} ]\nstyle[ {speaker.StyleName} ( id:{id} ) ]\n";
+
 
                         content += $"受け取った文字列: {(text.Length > 100 ? $"{text.Substring(0, 100)} ..." : text.Substring(0, text.Length))}"; //長さ100以上のテキストを切り捨てる
 

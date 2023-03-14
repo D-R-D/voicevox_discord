@@ -1,54 +1,42 @@
 ﻿using Discord;
 using Discord.Audio;
-using NAudio.Dsp;
 
 namespace voicevox_discord
 {
     internal class AudioServiceData
     {
-        public string name { get; private set; } = "四国めたん";
-        public string engine_name { get; private set; } = "voicevox";
-        public string style_name { get; private set; } = "ノーマル";
-        public int id { get; private set; } = 2;
-        public bool speaking { get; set; } = false;
+        private const string DefaultEngineName = "voicevox";
 
-        private ChatGpt? _ChatGPT;
-        public ChatGpt ChatGPT {
+        public string Name { get; private set; } = "四国めたん";
+        public string EngineName { get; private set; } = DefaultEngineName;
+        public string CreditName {
             get {
-                if (_ChatGPT == null) {
-                    _ChatGPT = new ChatGpt(Settings.Shared.m_OpenAIKey);
-                    _ChatGPT!.SetInitialMessage($"あなたはDiscordのチャットbotです。{name}として{style_name}な感じに振る舞いなさい。");
-                }
-                return _ChatGPT;
+                return Name switch {
+                    "もち子さん" => "もち子(cv 明日葉よもぎ)",
+                    _ => Name
+                };
             }
         }
+        public string StyleName { get; private set; } = "ノーマル";
+        public int Id { get; private set; } = 2;
+        public bool m_IsSpeaking = false;
 
-        public VoicevoxEngineApi? voicevoxEngineApi { get; private set; } = null;
+        public Cache<ChatGpt> ChachedChatGPT = new Cache<ChatGpt>(() => new ChatGpt(Settings.Shared.m_OpenAIKey));
+
+        public VoicevoxEngineApi? VoicevoxEngineApi { get; private set; } = Settings.Shared.m_EngineDictionary[DefaultEngineName];
 
         public IVoiceChannel? voiceChannel { get; set; } = null;
         public IAudioClient? audioclient { get; set; } = null;
         public AudioOutStream? audiooutstream { get; set; } = null;
 
-        public AudioServiceData()
+        public void SetSpeaker(string engineName, string speakerName, string styleName, int id)
         {
-            SetEngine(SpeakerInfo.GetEngineApiFromEngineName(engine_name));
-        }
-
-        public void SetEngine(VoicevoxEngineApi _voicevoxEngineApi)
-        {
-            voicevoxEngineApi = _voicevoxEngineApi;
-        }
-
-        public void SetSpeakerInfo(string _name, string _style_name, int _id)
-        {
-            style_name = _style_name;
-            name = _name;
-            id = _id;
-        }
-
-        public void SetEngineName(string _engine_name)
-        {
-            engine_name = _engine_name;
+            EngineName = engineName;
+            Name = speakerName;
+            StyleName = styleName;
+            Id = id;
+            VoicevoxEngineApi = Settings.Shared.m_EngineDictionary[DefaultEngineName];
+            ChachedChatGPT.Value.SetInitialMessage($"あなたはDiscordのチャットbotです。{Name}として{StyleName}な感じに振る舞いなさい。");
         }
     }
 }
