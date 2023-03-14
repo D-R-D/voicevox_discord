@@ -191,7 +191,7 @@ namespace voicevox_discord
         private static async Task ModalHandler(SocketModal modal)
         {
             _ = Task.Run(async () => {
-                await modal.DeferAsync();
+                await modal.RespondAsync("PROCESSING...");
                 string[] commandid = modal.Data.CustomId.Split(':');
                 var command = commandid[0];
                 var engineName = commandid[1];
