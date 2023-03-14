@@ -21,7 +21,7 @@ namespace voicevox_discord
             engine_name = name;
         }
 
-        public void Info() 
+        public void WriteInfo() 
         {
             Console.WriteLine($"[{engine_name}.Info]@{engine_ipaddress}:{engine_port}");
         }
