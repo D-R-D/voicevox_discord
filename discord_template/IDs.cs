@@ -12,7 +12,7 @@ namespace voicevox_discord
         public Ids(AppSettingsReader reader)
         {
             //config内のtokenを取得する
-            string? token = (string?)reader.GetValue("token", typeof(string));
+            string token = (string)reader.GetValue("token", typeof(string));
             if (token.IsNullOrEmpty()) { throw new Exception("tokenが不正です。\ntokenがnullもしくは空白です。"); }
             m_Token = token!;
 
@@ -22,13 +22,14 @@ namespace voicevox_discord
             m_GuildIds = guildId!.Split(',');
 
             //config内のapplication_idを取得する
-            string? applicationId = reader.GetValue("application_id", typeof(string)).ToString();
+            string applicationId = (string)reader.GetValue("application_id", typeof(string));
             if (applicationId.IsNullOrEmpty()) { throw new Exception("application_idが不正です。\napplication_idがnullもしくは空白です。"); }
             m_ApplicationId = applicationId!;
 
-            string? adminId = (string?)reader.GetValue("admin_id", typeof(string));
-            if (applicationId.IsNullOrEmpty()) { throw new Exception("application_idが不正です。\napplication_idがnullもしくは空白です。"); }
-            m_AdminIds = applicationId!.Split(',');
+            //config内のamin_idを取得する
+            string adminId = (string)reader.GetValue("admin_id", typeof(string));
+            if (adminId.IsNullOrEmpty()) { throw new Exception("application_idが不正です。\napplication_idがnullもしくは空白です。"); }
+            m_AdminIds = adminId!.Split(',');
         }
 
     }

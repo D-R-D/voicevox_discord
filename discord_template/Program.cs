@@ -88,30 +88,24 @@ namespace voicevox_discord
             {
                 try
                 {
-                    string commandname = command.Data.Name;
+                    SelectMenuBuilder? menuBuilder = null;
+                    ComponentBuilder? builder = null;
 
-                    if (commandname != "voicechannel" && commandname != "setspeaker" && commandname != "read" && commandname != "chat")
+                    //check HasGuildId
+                    if (!command.GuildId.HasValue)
                     {
-                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[commandname], "0", commandname, false);
-                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
-
-                        await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
-
+                        await command.DeleteOriginalResponseAsync();
                         return;
                     }
+                    ulong guildid = command.GuildId.Value;
+                    string commandname = command.Data.Name;
+
                     //
                     //guildidの登録処理
                     if (commandname == "voicechannel")
                     {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
-
-                        if(!command.GuildId.HasValue)
-                        {
-                            await command.DeleteOriginalResponseAsync();
-                            return;
-                        }
-                        ulong guildid = command.GuildId.Value;
 
                         //join
                         await audioService!.JoinOperation(command, firstval);
@@ -121,8 +115,8 @@ namespace voicevox_discord
                     if (commandname == "setspeaker")
                     {
                         string firstval = command.Data.Options.First().Value.ToString()!;
-                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[firstval], "0", firstval, true);
-                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+                        menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[firstval], "0", firstval, true);
+                        builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
 
@@ -130,8 +124,6 @@ namespace voicevox_discord
                     }
                     if (commandname == "read")
                     {
-                        audioService.CheckEngineApi();
-
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await audioService.TextReader(command, firstval);
@@ -139,14 +131,23 @@ namespace voicevox_discord
                         return;
                     }
 
-                    if(commandname == "chat")
+                    if (commandname == "chat")
                     {
-                        audioService.CheckEngineApi();
-
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await audioService.Chat(command, OPENAI_APIKEY!, firstval);
+
+                        return;
                     }
+
+                    //
+                    //その他のコマンドはwavを投げるやつのみ
+                    menuBuilder = SelectMenuEditor.CreateSpeakerMenu(paged_core_speakers[commandname], "0", commandname, false);
+                    builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+                    await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
+
+                    return;
+
                 }
                 catch (Exception ex)
                 {
@@ -173,6 +174,7 @@ namespace voicevox_discord
                 {
                     SelectMenuController selectMenuController = new SelectMenuController(arg);
 
+                    ulong guildid = arg.GuildId!.Value;
                     string[] commandid = arg.Data.CustomId.Split(':'); //speaker:corename:commandmode
                     string[] selecteditem = string.Join(", ", arg.Data.Values).Split('@'); //コマンド@コマンド名
                     bool commandmode = false;
@@ -198,14 +200,6 @@ namespace voicevox_discord
                         //guildidの登録処理
                         else
                         {
-                            if (!arg.GuildId.HasValue)
-                            {
-                                await arg.DeleteOriginalResponseAsync();
-
-                                return;
-                            }
-                            ulong guildid = arg.GuildId.Value;
-
                             //setspeaker
                             string speakername = selecteditem[1];
                             string stylename = selecteditem[2];

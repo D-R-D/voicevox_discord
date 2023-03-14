@@ -14,15 +14,6 @@ namespace voicevox_discord
         //internal Dictionary<ulong, AudioServiceData> GuildAudioService = new Dictionary<ulong, AudioServiceData>();
         internal List<KeyValuePair<ulong, AudioServiceData>> GuildAudioService = new();
 
-        public void CheckEngineApi()
-        {
-            foreach(var item in GuildAudioService)
-            {
-                Console.Write($"({item.Key})");
-                item.Value.voicevoxEngineApi!.Info();
-            }
-        }
-
         /// <summary>
         /// setting
         /// </summary>
