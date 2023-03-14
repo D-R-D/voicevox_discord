@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Audio;
+using NAudio.Dsp;
 
 namespace voicevox_discord
 {
@@ -21,6 +22,7 @@ namespace voicevox_discord
                 return _ChatGPT;
             }
         }
+
         public VoicevoxEngineApi? voicevoxEngineApi { get; private set; } = null;
 
         public IVoiceChannel? voiceChannel { get; set; } = null;

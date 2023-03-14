@@ -76,24 +76,27 @@ namespace voicevox_discord
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
             _ = Task.Run(async () => {
-                try {
-                    string commandname = command.Data.Name;
-
-                    if (commandname != "voicechannel" && commandname != "setspeaker" && commandname != "read" && commandname != "chat") {
-                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(s_PagedCoreSpeakers[commandname], "0", commandname, false);
-                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
-
-                        await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
-
+                try
+                {
+                    if (!command.GuildId.HasValue)
+                    {
+                        await command.RespondAsync("ごめんね、guild専用なんだ");
                         return;
                     }
+
+                    SelectMenuBuilder? menuBuilder = null;
+                    ComponentBuilder? builder = null;
+                    string commandname = command.Data.Name;
+
                     //
                     //guildidの登録処理
-                    if (commandname == "voicechannel") {
+                    if (commandname == "voicechannel")
+                    {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
 
-                        if (!command.GuildId.HasValue) {
+                        if (!command.GuildId.HasValue)
+                        {
                             await command.DeleteOriginalResponseAsync();
                             return;
                         }
@@ -104,16 +107,18 @@ namespace voicevox_discord
 
                         return;
                     }
-                    if (commandname == "setspeaker") {
+                    if (commandname == "setspeaker")
+                    {
                         string firstval = command.Data.Options.First().Value.ToString()!;
-                        var menuBuilder = SelectMenuEditor.CreateSpeakerMenu(s_PagedCoreSpeakers[firstval], "0", firstval, true);
-                        var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+                        menuBuilder = SelectMenuEditor.CreateSpeakerMenu(s_PagedCoreSpeakers[firstval], "0", firstval, true);
+                        builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
 
                         return;
                     }
-                    if (commandname == "read") {
+                    if (commandname == "read")
+                    {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await s_AudioService.TextReader(command, firstval);
@@ -121,14 +126,27 @@ namespace voicevox_discord
                         return;
                     }
 
-                    if (commandname == "chat") {
+                    if (commandname == "chat")
+                    {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
                         await s_AudioService.Chat(command, firstval);
+
+                        return;
                     }
-                } catch (Exception ex) {
+
+                    menuBuilder = SelectMenuEditor.CreateSpeakerMenu(s_PagedCoreSpeakers[commandname], "0", commandname, false);
+                    builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+
+                    await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
+
+                    return;
+                }
+                catch (Exception ex)
+                {
                     Console.WriteLine(ex.ToString());
-                    if (command.HasResponded) {
+                    if (command.HasResponded)
+                    {
                         await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                         return;
                     }
@@ -167,12 +185,7 @@ namespace voicevox_discord
                         //
                         //guildidの登録処理
                         else {
-                            if (!arg.GuildId.HasValue) {
-                                await arg.DeleteOriginalResponseAsync();
-
-                                return;
-                            }
-                            ulong guildid = arg.GuildId.Value;
+                            ulong guildid = arg.GuildId!.Value;
 
                             //setspeaker
                             string speakername = selecteditem[1];

@@ -42,16 +42,20 @@ namespace voicevox_discord
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
 
-            if (firstval == "join") {
-                try {
-                    if (((IVoiceState)command.User).VoiceChannel == null) {
+            if (firstval == "join")
+            {
+                try
+                {
+                    if (((IVoiceState)command.User).VoiceChannel == null) 
+                    {
                         await command.ModifyOriginalResponseAsync(m => { m.Content = "有効ボイスチャンネル ゼロ\nイグジット完了…\n…止まった"; });
 
                         return;
                     }
 
                     bool rejoin = false;
-                    if (audioServiceData.audioclient != null) {
+                    if (audioServiceData.audioclient != null)
+                    {
                         if (audioServiceData.audioclient.ConnectionState == ConnectionState.Connected) {
                             rejoin = true;
 
@@ -62,13 +66,16 @@ namespace voicevox_discord
                     }
                     audioServiceData.voiceChannel = ((IVoiceState)command.User).VoiceChannel;
                     await JoinChannel(rejoin, audioServiceData, guildid);
-                } catch (Exception ex) {
+                }
+                catch (Exception ex) 
+                {
                     Console.WriteLine(ex.ToString());
                     await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                 }
             }
 
-            if (firstval == "leave") {
+            if (firstval == "leave")
+            {
                 if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected) {
                     await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
                 }
