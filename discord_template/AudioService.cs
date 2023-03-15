@@ -159,7 +159,7 @@ namespace voicevox_discord
             }
 
             try {
-                string response = await audioServiceData.ChachedChatGPT.Value.RequestSender(text);
+                string response = await audioServiceData.ChatGpt.RequestSender(text);
                 await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
                 await PlayAudio(audioServiceData, guildid, response);
             } catch (Exception ex) {
@@ -205,7 +205,7 @@ namespace voicevox_discord
             }
             audioServiseData.m_IsSpeaking = true;
 
-            string audiofile = $"{Directory.GetCurrentDirectory()}/ffmpeg/audiofile/{guildid}.wav";
+            string audiofile = $"{Directory.GetCurrentDirectory()}/audiofile/{guildid}.wav";
             audioServiseData.VoicevoxEngineApi!.WriteInfo();
             using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.Id, text))
             using (var wfr = new WaveFileReader(wavstream)) {
@@ -228,11 +228,11 @@ namespace voicevox_discord
 
         private Process CreateStream(ulong guildid)
         {
-            string ffmpegdir = $"{Directory.GetCurrentDirectory()}/ffmpeg";
+            string ffmpegdir = $"{Directory.GetCurrentDirectory()}/audiofile";
 
             return Process.Start(new ProcessStartInfo {
-                FileName = $"{ffmpegdir}/ffmpeg.exe",
-                Arguments = $"-hide_banner -loglevel panic -i \"{ffmpegdir}/audiofile/{guildid}.wav\" -ac 2 -f s16le -ar 48000 pipe:1",
+                FileName = $"ffmpeg",
+                Arguments = $"-hide_banner -loglevel panic -i \"{ffmpegdir}/{guildid}.wav\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true
             })!;

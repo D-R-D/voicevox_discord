@@ -13,7 +13,15 @@ namespace voicevox_discord
         public int Id { get; private set; } = 2;
         public bool m_IsSpeaking = false;
 
-        public Cache<ChatGpt> ChachedChatGPT = new Cache<ChatGpt>(() => new ChatGpt(Settings.Shared.m_OpenAIKey));
+        private Cache<ChatGpt, AudioServiceData> ChachedChatGPT = new Cache<ChatGpt, AudioServiceData>(_ => 
+        {
+            var chatGpt = new ChatGpt(Settings.Shared.m_OpenAIKey);
+            chatGpt.SetInitialMessage(_.Name, _.StyleName);
+
+            return chatGpt;
+        });
+
+        public ChatGpt ChatGpt => ChachedChatGPT.Get(this);
 
         public VoicevoxEngineApi? VoicevoxEngineApi { get; private set; } = Settings.Shared.m_EngineDictionary[DefaultEngineName];
 
@@ -28,7 +36,12 @@ namespace voicevox_discord
             StyleName = styleName;
             Id = id;
             VoicevoxEngineApi = Settings.Shared.m_EngineDictionary[DefaultEngineName];
-            ChachedChatGPT.Value.SetInitialMessage($"あなたはDiscordのチャットbotです。{Name}として{StyleName}な感じに振る舞いなさい。");
+            SetInitialMessage();
+        }
+
+        private void SetInitialMessage()
+        {
+            ChatGpt.SetInitialMessage(Name, StyleName);
         }
     }
 }

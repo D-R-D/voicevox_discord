@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,17 +17,20 @@ namespace voicevox_discord
         public Usage? usage { get; set; }
         public List<Choice>? choices { get; set; }
     }
+
     public class Usage
     {
         public int prompt_tokens { get; set; }
         public int completion_tokens { get; set; }
         public int total_tokens { get; set; }
     }
+
     public class Message
     {
         public string? role { get; set; }
         public string? content { get; set; }
     }
+
     public class Choice
     {
         public Message? message { get; set; }
@@ -46,9 +50,9 @@ namespace voicevox_discord
             InitMessage = "これからの会話に適切な返答をしなさい。";
         }
 
-        public void SetInitialMessage(string _InitMessage)
+        public void SetInitialMessage(string Name, string styleName)
         {
-            InitMessage = _InitMessage;
+            InitMessage = $"You are a chat bot on discord. You are {Name}. You are {styleName} and concise in your responses. You use Japanese.";
         }
 
         public async Task<string> RequestSender(string message)

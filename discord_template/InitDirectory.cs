@@ -11,9 +11,7 @@ namespace voicevox_discord
         public void init()
         {
             checkdir("commands");
-
-            checkdir("ffmpeg");
-            checkdir("ffmpeg/audiofile");
+            checkdir("audiofile");
         }
 
         private void checkdir(string dirname)
