@@ -19,7 +19,7 @@ namespace voicevox_discord
         public readonly string m_ApplicationId;
         public readonly string[] m_AdminIds;
         public readonly string m_DiscordAPIVersion;
-        public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary; // { enginename, VoicevoxEngineApi }
+        public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary;
 
 
         public Settings()

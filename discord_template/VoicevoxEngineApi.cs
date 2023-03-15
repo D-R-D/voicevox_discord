@@ -3,22 +3,6 @@ using System.Text;
 
 namespace voicevox_discord
 {
-#pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
-    internal class Speaker
-    {
-        public string name { get; set; }
-        public string speaker_uuid { get; set; }
-        public IList<Style> styles { get; set; }
-        public string version { get; set; }
-
-    }
-    internal class Style
-    {
-        public string name { get; set; }
-        public int id { get; set; }
-    }
-#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
-
     internal class VoicevoxEngineApi
     {
         private readonly string m_EngineIPAddress;
@@ -117,4 +101,19 @@ namespace voicevox_discord
             return m_Speakers.ToArray().Length > page * 16;
         }
     }
+
+#pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
+    internal class Speaker
+    {
+        public string name { get; set; }
+        public string speaker_uuid { get; set; }
+        public IList<Style> styles { get; set; }
+        public string version { get; set; }
+    }
+    internal class Style
+    {
+        public string name { get; set; }
+        public int id { get; set; }
+    }
+#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
 }
