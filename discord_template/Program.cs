@@ -218,7 +218,7 @@ namespace voicevox_discord
                         Optional<IEnumerable<FileAttachment>> optional = new Optional<IEnumerable<FileAttachment>>(flis);
 
                         //話者"もち子さん"はクレジットに記載する名前が話者リストの名前と違うので別にクレジット記載用の処理を追加
-                        string content = $"{modal.User.Mention}\n話者[ {engineName}:{ToCreditName(speakerName)} ]\nstyle[ {styleName} ( id:{speakerId} ) ]\n";
+                        string content = $"{modal.User.Mention}\n話者[ {engineName.ToUpper()}:{ToCreditName(speakerName)} ]\nstyle[ {styleName} ( id:{speakerId} ) ]\n";
                         content += $"受け取った文字列: {(text.Length > 100 ? $"{text.Substring(0, 100)} ..." : text.Substring(0, text.Length))}"; //長さ100以上のテキストを切り捨てる
 
                         await modal.ModifyOriginalResponseAsync(m => {
