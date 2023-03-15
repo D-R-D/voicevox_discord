@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace voicevox_discord
 {
@@ -39,6 +40,24 @@ namespace voicevox_discord
         {
             string json = await GetFromApi($@"http://{m_EngineIPAddress}:{m_EnginePort}/speakers");
             m_Speakers = JsonConvert.DeserializeObject<IList<Speaker>>(json)!;
+        }
+
+        //
+        // ユーザー辞書登録を行う
+        public async Task<bool> SetUserDictionary(string surface, string pronunciation)
+        {
+            HttpClient client = new HttpClient();
+            StringContent content = new StringContent("", Encoding.UTF8, @"application/json");
+            var res = await client.PostAsync(@$"http://{m_EngineIPAddress}:{m_EnginePort}/user_dict_word?surface={surface}&pronunciation={pronunciation}&accent_type=1", content);
+
+            if (!res.IsSuccessStatusCode)
+            {
+                Console.WriteLine(res);
+                return false;
+            }
+
+            await Task.CompletedTask;
+            return true;
         }
 
         //

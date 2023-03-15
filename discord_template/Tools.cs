@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.RegularExpressions;
 
 namespace voicevox_discord
 {
@@ -19,6 +20,11 @@ namespace voicevox_discord
             if(port < 1 || port > 65535) { return true; }
 
             return false;
+        }
+
+        public static bool IsKatakana(this string kana)
+        {
+            return Regex.IsMatch(kana, @"^\p{IsKatakana}*$");
         }
     }
 }

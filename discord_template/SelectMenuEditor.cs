@@ -4,6 +4,26 @@ namespace voicevox_discord
 {
     internal class SelectMenuEditor
     {
+        public static SelectMenuBuilder CreateEngineMenu()
+        {
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧").WithCustomId($"engine").WithMinValues(1).WithMaxValues(1);
+            var engines = Settings.Shared.m_EngineDictionary.Keys;
+
+            foreach ( var engine in engines )
+            {
+                try
+                {
+                    builder.AddOption(engine.ToUpper(), $"engine@{engine}", $"No any info.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            return builder;
+        }
+
         public async static Task<SelectMenuBuilder> CreateSpeakerMenu(string engineName, int page, bool voicechannel = false)
         {
             string commandmode = "0";
