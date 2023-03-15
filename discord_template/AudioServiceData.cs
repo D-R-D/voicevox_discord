@@ -35,7 +35,7 @@ namespace voicevox_discord
             Name = speakerName;
             StyleName = styleName;
             Id = id;
-            VoicevoxEngineApi = Settings.Shared.m_EngineDictionary[DefaultEngineName];
+            VoicevoxEngineApi = Settings.Shared.m_EngineDictionary[EngineName];
             SetInitialMessage();
         }
 
