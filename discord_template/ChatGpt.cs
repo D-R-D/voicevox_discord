@@ -52,7 +52,7 @@ namespace voicevox_discord
 
         public void SetInitialMessage(string Name, string styleName)
         {
-            InitMessage = $"You are a chat bot on discord. You are {Name}. You are {styleName} and concise in your responses. You use Japanese.";
+            InitMessage = Settings.Shared.m_GptInitialMessage.Replace("{Name}", Name).Replace("{styleName}", styleName);
         }
 
         public async Task<string> RequestSender(string message)
@@ -90,7 +90,7 @@ namespace voicevox_discord
             messages.Add(user_content);
 
             Dictionary<string, object> body = new Dictionary<string, object>();
-            body.Add("model", "gpt-3.5-turbo");
+            body.Add("model", Settings.Shared.m_GptModel);
             body.Add("messages", messages);
 
             return JsonConvert.SerializeObject(body);

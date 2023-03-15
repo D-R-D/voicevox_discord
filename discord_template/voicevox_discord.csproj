@@ -20,8 +20,4 @@
     <EditorConfigFiles Remove="D:\kakeru_jp\voicevox_discord\discord_template\.editorconfig" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="D:\kakeru_jp\voicevox_discord\discord_template\.editorconfig" />
-  </ItemGroup>
-
 </Project>
