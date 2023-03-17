@@ -67,8 +67,16 @@ namespace voicevox_discord
         [Command(RunMode = RunMode.Async)]
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
-            _ = Task.Run(async () => {
-                try {
+            _ = Task.Run(async () => 
+            {
+                try 
+                {
+                    if(Settings.Shared.m_EngineDictionary.Count == 0)
+                    {
+                        await command.RespondAsync("エンジンリスト、話者データが存在しません。");
+                        return;
+                    }
+
                     if (!command.GuildId.HasValue) {
                         await command.RespondAsync("ごめんね、guild専用なんだ");
                         return;
@@ -79,8 +87,17 @@ namespace voicevox_discord
                     ComponentBuilder? builder = null;
                     string commandname = command.Data.Name;
 
+                    if (commandname == "voice")
+                    {
+                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, 0);
+                        builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
+
+                        await command.RespondAsync("以下の選択肢からエンジンを選択してください", components: builder.Build(), ephemeral: true);
+                        return;
+                    }
+
                     //
-                    //guildidの登録処理
+                    //join, leave
                     if (commandname == "voicechannel") {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
@@ -91,14 +108,15 @@ namespace voicevox_discord
                         return;
                     }
                     if (commandname == "setspeaker") {
-                        string firstval = command.Data.Options.First().Value.ToString()!;
-                        menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(firstval, 0, true);
+                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, 1);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
-                        await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
+                        await command.RespondAsync("以下の選択肢からエンジンを選択してください", components: builder.Build(), ephemeral: true);
 
                         return;
                     }
+                    //
+                    //set中の話者が読み上げる
                     if (commandname == "read") {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
@@ -106,7 +124,8 @@ namespace voicevox_discord
 
                         return;
                     }
-
+                    //
+                    //ChatGPTの返答をset中の話者が読み上げる
                     if (commandname == "chat") {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
@@ -118,21 +137,25 @@ namespace voicevox_discord
                     if(commandname == "dict")
                     {
                         //エンジンのリストを作成
-                        menuBuilder = SelectMenuEditor.CreateEngineMenu();
+                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, 3);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync("辞書登録するエンジンを選択してください" , components: builder.Build(), ephemeral: true);
                         return;
                     }
 
-                    menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(commandname, 0, false);
-                    builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
-
-                    await command.RespondAsync("以下の選択肢から話者を選択してください", components: builder.Build(), ephemeral: true);
-                    return;
-                } catch (Exception ex) {
+                    if (command.HasResponded)
+                    {
+                        await command.ModifyOriginalResponseAsync(m => { m.Content = "不明なコマンドを受信しました。"; });
+                        return;
+                    }
+                    await command.RespondAsync("不明なコマンドを受信しました");
+                } 
+                catch (Exception ex)
+                {
                     Console.WriteLine(ex.ToString());
-                    if (command.HasResponded) {
+                    if (command.HasResponded)
+                    {
                         await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                         return;
                     }
@@ -147,72 +170,83 @@ namespace voicevox_discord
         //セレクトメニューのイベント処理
         private static async Task SelectMenuHandler(SocketMessageComponent arg)
         {
-            _ = Task.Run(async () => {
-                try {
+            _ = Task.Run(async () => 
+            {
+                try
+                {
                     SelectMenuController selectMenuController = new SelectMenuController(arg);
 
-                    string[] commandid = arg.Data.CustomId.Split(':'); //speaker:corename:commandmode
-                    string[] selecteditem = arg.Data.Values.First().Split('@'); //コマンド@コマンド名
-                    bool commandmode = false;
-                    if (commandid.Length > 2)
-                    {
-                        if (commandid[2] == "1") { commandmode = true; }
-                    }
+                    string[] CustomID = arg.Data.CustomId.Split(':');          // コマンド名 : [エンジン名] : [話者名] : チャンネルモード
+                    string[] CustomValue = arg.Data.Values.First().Split('@'); // 内部コマンド名 @ コマンド値
 
-                    if (commandid[0] == "speaker")
-                    {
-                        var respondcontent = await selectMenuController.BuildSelectmenu(commandid, commandmode);
-                        await arg.RespondAsync(respondcontent.label, components: respondcontent.builder.Build(), ephemeral: true);
-                        return;
-                    }
-                    if (commandid[0] == "speaker_id") 
-                    {
-                        string value = string.Join(", ", arg.Data.Values);
+                    Console.WriteLine($"[{arg.Data.CustomId}] : [{arg.Data.Values.First()}]");
 
-                        //
-                        //wav生成の内容記述
-                        if (!commandmode) 
-                        {
-                            var textitem = new TextInputBuilder().WithLabel("INPUT TEXT").WithCustomId(value).WithStyle(TextInputStyle.Paragraph).WithRequired(true).WithPlaceholder("話して欲しい文章を入力");
-                            var builder = new ModalBuilder().WithTitle("Input Text").WithCustomId($"speak_text:{commandid[1]}").AddTextInput(textitem);
+                    string commandName = CustomID.First();
+                    string InnerCommandName = CustomValue.First();
+                    string InnerCommandValue = CustomValue.Last();
+                    int CommandMode = int.Parse(CustomID.Last());
 
-                            await arg.RespondWithModalAsync(builder.Build());
-                            return;
-                        }
-                        //
-                        //guildidの登録処理
-                        else
-                        {
-                            ulong guildid = arg.GuildId!.Value;
-
-                            //setspeaker
-                            string speakername = selecteditem[1];
-                            string stylename = selecteditem[2];
-                            int speakerId = await Settings.Shared.m_EngineDictionary[commandid[1]].GetSpeakerId(speakername, stylename);
-                            s_AudioService.SetSpeaker(guildid, speakername, stylename, speakerId, commandid[1]);
-
-                            await arg.RespondAsync($"話者を[{commandid[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerId})]に変更しました");
-                            return;
-                        }
-                    }
                     //
-                    //辞書登録の内容記述
-                    if (commandid[0] == "engine")
-                    {
-                        string engineName = selecteditem[1];
-
+                    //辞書登録の内容記述 engineリストはCustomID[1]にチャンネルモードを返すので注意
+                    if (commandName == "engine" && CommandMode == 3)
+                    { 
                         // 登録内容のフォームを作成
                         var surface = new TextInputBuilder().WithLabel("SURFACE").WithCustomId("surface").WithStyle(TextInputStyle.Short).WithRequired(true).WithPlaceholder("辞書に登録する単語").WithMaxLength(100);
                         var pronunciation = new TextInputBuilder().WithLabel("PRONUNCIATION").WithCustomId("pronunciation").WithStyle(TextInputStyle.Short).WithRequired(true).WithPlaceholder("カタカナでの読み方").WithMaxLength(500);
-                        var modalbuilder = new ModalBuilder().WithTitle("Input Text").WithCustomId($"user_dict:{engineName}").AddTextInput(surface).AddTextInput(pronunciation);
+                        var modalbuilder = new ModalBuilder().WithTitle("Input Text").WithCustomId($"user_dict:{InnerCommandValue}").AddTextInput(surface).AddTextInput(pronunciation);
 
                         await arg.RespondWithModalAsync(modalbuilder.Build());
                         return;
                     }
 
-                } catch (Exception ex) {
+                    var respondcontent = await selectMenuController.BuildSelectmenu();
+                    if (respondcontent.label == null && respondcontent.builder == null)
+                    {
+                        await arg.RespondAsync("値の破損を確認しました。処理をスキップします。");
+                        return;
+                    }
+
+                    //
+                    //スタイル一覧(ページ以外選択時)
+                    if (commandName == "speaker_id" && respondcontent.label == "Go Modal") 
+                    {
+                        //
+                        // /voice コマンド、wav生成の内容記述
+                        if (CommandMode == 0) 
+                        {
+                            var textitem = new TextInputBuilder().WithLabel("INPUT TEXT").WithCustomId($"{CustomID[2]}@{InnerCommandValue}").WithStyle(TextInputStyle.Paragraph).WithRequired(true).WithPlaceholder("話して欲しい文章を入力");
+                            var builder = new ModalBuilder().WithTitle("Input Text").WithCustomId($"speak_text:{CustomID[1]}").AddTextInput(textitem);
+
+                            await arg.RespondWithModalAsync(builder.Build());
+                            return;
+                        }
+                        //
+                        // /setspeaker ギルド話者の登録処理
+                        if(CommandMode == 1)
+                        {
+                            ulong guildid = arg.GuildId!.Value;
+
+                            //setspeaker
+                            string speakername = CustomID[2];
+                            string stylename = InnerCommandValue;
+                            int speakerId = await Settings.Shared.m_EngineDictionary[CustomID[1]].GetSpeakerId(speakername, stylename);
+                            s_AudioService.SetSpeaker(guildid, speakername, stylename, speakerId, CustomID[1]);
+
+                            await arg.RespondAsync($"話者を[{CustomID[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerId})]に変更しました");
+                            return;
+                        }
+                    }
+                    //
+                    //エンジン・話者・話者ID選択画面
+                    await arg.RespondAsync(respondcontent.label, components: respondcontent.builder!.Build(), ephemeral: true);
+                    return;
+
+                } 
+                catch (Exception ex)
+                {
                     Console.WriteLine(ex.ToString());
-                    if (arg.HasResponded) {
+                    if (arg.HasResponded) 
+                    {
                         await arg.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                         return;
                     }
@@ -229,21 +263,21 @@ namespace voicevox_discord
         {
             _ = Task.Run(async () => {
                 await modal.RespondAsync("PROCESSING...");
-                string[] commandid = modal.Data.CustomId.Split(':');
-                var command = commandid[0];
-                var engineName = commandid[1];
+
+                List<SocketMessageComponentData> components = modal.Data.Components.ToList();
+                string[] CustomID = modal.Data.CustomId.Split(':');
+                var command = CustomID[0];
+                var engineName = CustomID[1];
                 Console.WriteLine(command + ":" + engineName);
-                var guildId = modal.GuildId!.Value;
 
                 try 
                 {
                     if (command == "speak_text")
                     {
                         VoicevoxEngineApi voicevoxEngineApi = Settings.Shared.m_EngineDictionary[engineName];
-                        List<SocketMessageComponentData> components = modal.Data.Components.ToList();
-                        var speakerValues = components.First().CustomId.Split("@");
-                        var speakerName = speakerValues[1];
-                        var styleName = speakerValues[2];
+                        var speakerValues = components[0].CustomId.Split("@");
+                        var speakerName = speakerValues[0];
+                        var styleName = speakerValues[1];
 
                         var speakerId = await voicevoxEngineApi.GetSpeakerId(speakerName, styleName);
                         string text = components.First().Value;
@@ -269,7 +303,6 @@ namespace voicevox_discord
                     
                     if(command == "user_dict")
                     {
-                        List<SocketMessageComponentData> components = modal.Data.Components.ToList();
                         string surface = components[0].Value;
                         string pronunciation = components[1].Value;
 
@@ -287,8 +320,9 @@ namespace voicevox_discord
                         await modal.ModifyOriginalResponseAsync(m => { m.Content = $"辞書登録が完了しました。\n```\nTargetEngine:{engineName}\nsurface:{surface}\npronunciation:{pronunciation}\n```"; });
                         return;
                     }
-                } catch (Exception ex) {
-                    Console.WriteLine(ex.Message);
+                } catch (Exception ex) 
+                {
+                    Console.WriteLine(ex.ToString());
                     await modal.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                 }
             });

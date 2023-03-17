@@ -109,7 +109,7 @@ namespace voicevox_discord
             }
             return m_Speakers.ToArray().Skip(16 * page).Take(16).ToArray();
         }
-        public async Task<bool> PageExist(int page)
+        public async Task<bool> SpeakerPageExist(int page)
         {
             if (page < 0) {
                 return false;
@@ -118,6 +118,29 @@ namespace voicevox_discord
                 await Task.Yield();
             }
             return m_Speakers.ToArray().Length > page * 16;
+        }
+
+        public async Task<Style[]> GetStyles(string speakername, int page)
+        {
+            Console.WriteLine($"{speakername}");
+
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.Where(_ => _.name == speakername).First().styles.ToArray().Skip(16 * page).Take(16).ToArray();
+        }
+        public async Task<bool> StylePageExist(string speakername, int page)
+        {
+            if (page < 0)
+            {
+                return false;
+            }
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.Where(_ => _.name == speakername).FirstOrDefault()!.styles.ToArray().Length > page * 16;
         }
     }
 

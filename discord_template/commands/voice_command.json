@@ -1,4 +1,4 @@
 {
-  "name": "voicevox",
-  "description": "voicevox wav builder"
+  "name": "voice",
+  "description": "Get Voice .wav file"
 }

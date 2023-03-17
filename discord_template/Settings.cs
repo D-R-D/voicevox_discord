@@ -73,10 +73,13 @@ namespace voicevox_discord
             try {
                 XElement engine_element = XElement.Load($"{Directory.GetCurrentDirectory()}/{XmlFileName}");
 
-                foreach (var engine in engine_element.Elements("engine")) {
+                foreach (var engine in engine_element.Elements("engine"))
+                {
                     var name = engine.Element("name")!.Value;
                     var ip = engine.Element("ipaddress")!.Value;
                     var port = int.Parse(engine.Element("port")!.Value);
+
+                    // エンジンが立っていない場合はエラーを吐いてスキップしたかった
                     var api = VoicevoxEngineApi.Create(ip, port, name);
                     engineDictionary.Add(name, api);
 

@@ -7,6 +7,17 @@ namespace voicevox_discord
     {
         private const string DefaultEngineName = "voicevox";
 
+        public AudioServiceData()
+        {
+            var speaker = Settings.Shared.m_EngineDictionary.First().Value.GetSpeakers().Result.First();
+            var style = speaker.styles.First();
+
+            EngineName = Settings.Shared.m_EngineDictionary.First().Key;
+            Name = speaker.name;
+            StyleName = style.name;
+            Id = style.id;
+        }
+
         public string Name { get; private set; } = "四国めたん";
         public string EngineName { get; private set; } = DefaultEngineName;
         public string StyleName { get; private set; } = "ノーマル";

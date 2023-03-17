@@ -19,8 +19,13 @@ namespace voicevox_discord
 
             //コマンドファイルの中身を取り出す
             var CommandList = commandPathList.Select(_ => File.ReadAllText(_));
-            foreach (string jsonCommand in CommandList) {
-                foreach (string id in Settings.Shared.m_GuildIds) {
+
+            //送信する
+            HttpClient client = new HttpClient();
+            foreach (string jsonCommand in CommandList)
+            {
+                foreach (string id in Settings.Shared.m_GuildIds) 
+                {
                     HttpRequestMessage request = GetHeader(id);
 
                     if (jsonCommand.IsNullOrEmpty()) { throw new Exception("json_commandが不正です。\njson_commandがnullもしくは空白です。"); }
@@ -29,9 +34,9 @@ namespace voicevox_discord
                     HttpRequestMessage sendRequest = RequestContentBuilder(request, jsonCommand);
 
                     //送信する
-                    HttpClient client = new HttpClient();
                     HttpResponseMessage response = client.Send(sendRequest);
                     Console.WriteLine(response.ToString());
+                    Thread.Sleep(500);
                 }
             }
         }

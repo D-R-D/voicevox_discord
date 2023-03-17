@@ -200,7 +200,8 @@ namespace voicevox_discord
 
         private async Task PlayAudio(AudioServiceData audioServiseData, ulong guildid, string text)
         {
-            if (audioServiseData.m_IsSpeaking) {
+            if (audioServiseData.m_IsSpeaking)
+            {
                 return;
             }
             audioServiseData.m_IsSpeaking = true;
