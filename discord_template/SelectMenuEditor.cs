@@ -15,10 +15,9 @@ namespace voicevox_discord
         /// <param name="page"></param>
         /// <param name="voiceChannel"></param>
         /// <returns></returns>
-        public static SelectMenuBuilder CreateEngineMenu(int page, int CommandMode = 0)
+        public static SelectMenuBuilder CreateEngineMenu(int page, string CommandMode)
         {
-            string commandMode = CommandMode.ToString();
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧").WithCustomId($"engine:{commandMode}").WithMinValues(1).WithMaxValues(1);
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧 p.{page}").WithCustomId($"engine:{CommandMode}").WithMinValues(1).WithMaxValues(1);
             
             var engines = Settings.Shared.m_EngineDictionary.Keys.Skip(16 * page).Take(16).ToArray();
             if (page > 0)
@@ -59,10 +58,9 @@ namespace voicevox_discord
         /// <param name="page"></param>
         /// <param name="voiceChannel"></param>
         /// <returns></returns>
-        public async static Task<SelectMenuBuilder> CreateSpeakerMenu(string engineName, int page, int CommandMode = 0)
+        public async static Task<SelectMenuBuilder> CreateSpeakerMenu(string engineName, int page, string CommandMode)
         {
-            string commandMode = CommandMode.ToString();
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId($"speaker:{engineName}:{commandMode}").WithMinValues(1).WithMaxValues(1);
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId($"speaker:{engineName}:{CommandMode}").WithMinValues(1).WithMaxValues(1);
 
             if (page > 0)
             {
@@ -103,10 +101,9 @@ namespace voicevox_discord
         /// <param name="page"></param>
         /// <param name="CommandMode"></param>
         /// <returns></returns>
-        public async static Task<SelectMenuBuilder> CreateStyleMenu(string engineName, string speakerName, int page = 0, int CommandMode = 0)
+        public async static Task<SelectMenuBuilder> CreateStyleMenu(string engineName, string speakerName, int page, string CommandMode)
         {
-            string commandMode = CommandMode.ToString();
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("スタイル一覧").WithCustomId($"speaker_id:{engineName}:{speakerName}:{commandMode}").WithMinValues(1).WithMaxValues(1);
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"スタイル一覧 p.{page}").WithCustomId($"speaker_id:{engineName}:{speakerName}:{CommandMode}").WithMinValues(1).WithMaxValues(1);
 
             if (page > 0)
             {

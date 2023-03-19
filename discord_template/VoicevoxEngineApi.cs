@@ -36,7 +36,7 @@ namespace voicevox_discord
             Console.WriteLine($"[{m_EngineName}.Info]@{m_EngineIPAddress}:{m_EnginePort}");
         }
 
-        private async void LoadSpeakers()
+        public async void LoadSpeakers()
         {
             string json = await GetFromApi($@"http://{m_EngineIPAddress}:{m_EnginePort}/speakers");
             m_Speakers = JsonConvert.DeserializeObject<IList<Speaker>>(json)!;
@@ -122,8 +122,6 @@ namespace voicevox_discord
 
         public async Task<Style[]> GetStyles(string speakername, int page)
         {
-            Console.WriteLine($"{speakername}");
-
             while (m_Speakers == null)
             {
                 await Task.Yield();

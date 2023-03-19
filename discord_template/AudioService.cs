@@ -30,16 +30,21 @@ namespace voicevox_discord
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
 
-            if (firstval == "join") {
-                try {
-                    if (((IVoiceState)command.User).VoiceChannel == null) {
+            if (firstval == "join")
+            {
+                try
+                {
+                    if (((IVoiceState)command.User).VoiceChannel == null)
+                    {
                         await command.ModifyOriginalResponseAsync(m => { m.Content = "有効ボイスチャンネル ゼロ\nイグジット完了…\n…止まった"; });
                         return;
                     }
 
                     bool rejoin = false;
-                    if (audioServiceData.audioclient != null) {
-                        if (audioServiceData.audioclient.ConnectionState == ConnectionState.Connected) {
+                    if (audioServiceData.audioclient != null)
+                    {
+                        if (audioServiceData.audioclient.ConnectionState == ConnectionState.Connected)
+                        {
                             rejoin = true;
 
                             await audioServiceData.audioclient.StopAsync();
@@ -47,16 +52,21 @@ namespace voicevox_discord
                             audioServiceData.voiceChannel = null;
                         }
                     }
+
                     audioServiceData.voiceChannel = ((IVoiceState)command.User).VoiceChannel;
                     await JoinChannel(rejoin, audioServiceData, guildid);
-                } catch (Exception ex) {
+                } 
+                catch (Exception ex) 
+                {
                     Console.WriteLine(ex.ToString());
                     await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                 }
             }
 
-            if (firstval == "leave") {
-                if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected) {
+            if (firstval == "leave") 
+            {
+                if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
+                {
                     await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
@@ -71,20 +81,24 @@ namespace voicevox_discord
 
         private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid)
         {
-            audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync().ConfigureAwait(false);
-            audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed);
+            audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
+            audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed, packetLoss: 10);
             audioServiseData.audioclient.Disconnected += Audioclient_Disconnected;
 
-            _ = Task.Run(async () => {
+            _ = Task.Run(async () =>
+            {
                 string text = $"{audioServiseData.Name}です。{audioServiseData.StyleName}な感じで行きますね。";
 
-                if (rejoin) {
+                if (rejoin)
+                {
                     text = $"{audioServiseData.Name}です。再起動してきました。";
                 }
 
-                try {
+                try 
+                {
                     await PlayAudio(audioServiseData, guildid, text);
-                } catch (Exception ex) {
+                } catch (Exception ex) 
+                {
                     Console.WriteLine(ex.ToString());
                 }
             });
@@ -128,14 +142,19 @@ namespace voicevox_discord
 
             Console.WriteLine(speakerName + " : " + id);
 
-            if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected) {
+            if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
+            {
                 return;
             }
 
-            _ = Task.Run(async () => {
-                try {
+            _ = Task.Run(async () =>
+            {
+                try 
+                {
                     await PlayAudio(target, guildid, $"変わりまして{target.Name}です。{target.StyleName}な感じで行きますね。");
-                } catch (Exception ex) {
+                }
+                catch (Exception ex)
+                {
                     Console.WriteLine(ex.ToString());
                 }
             });
@@ -153,17 +172,21 @@ namespace voicevox_discord
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
 
-            if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected) {
+            if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
+            {
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
                 return;
             }
 
-            try {
+            try 
+            {
                 string response = await audioServiceData.ChatGpt.RequestSender(text);
                 await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
                 await PlayAudio(audioServiceData, guildid, response);
-            } catch (Exception ex) {
-                await command.ModifyOriginalResponseAsync(m => { m.Content = $"{ex.Message}\n何故だ！\n俺にも分からない！！\n答えろ！！\n教えてくれ！！\n答えろ！！！\nボスぅぅ！！！！"; });
+            }
+            catch (Exception ex)
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content += $"\n{ex.Message}\n何故だ！\n俺にも分からない！！\n答えろ！！\n教えてくれ！！\n答えろ！！！\nボスぅぅ！！！！"; });
                 Console.WriteLine(ex.ToString());
             }
         }
@@ -179,15 +202,20 @@ namespace voicevox_discord
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
 
-            if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected) {
+            if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
+            {
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
                 return;
             }
 
-            _ = Task.Run(async () => {
-                try {
+            _ = Task.Run(async () =>
+            {
+                try 
+                {
                     await PlayAudio(audioServiseData, guildid, text);
-                } catch (Exception ex) {
+                } 
+                catch (Exception ex)
+                {
                     Console.WriteLine(ex.ToString());
                     await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                     return;
@@ -206,23 +234,38 @@ namespace voicevox_discord
             }
             audioServiseData.m_IsSpeaking = true;
 
-            string audiofile = $"{Directory.GetCurrentDirectory()}/audiofile/{guildid}.wav";
-            audioServiseData.VoicevoxEngineApi!.WriteInfo();
-            using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.Id, text))
-            using (var wfr = new WaveFileReader(wavstream)) {
-                WaveFileWriter.CreateWaveFile(audiofile, wfr);
-            }
-
-            Process process = CreateStream(guildid);
-            using (var output = process.StandardOutput.BaseStream)
-            //using (var output = new MemoryStream())
+            try
             {
-                //await Cli.Wrap($"{ffmpegdir}/ffmpeg.exe").WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1").WithStandardInputPipe(PipeSource.FromStream(wavstream)).WithStandardOutputPipe(PipeTarget.ToStream(output)).WithValidation(CommandResultValidation.None).ExecuteAsync();
-                try { await output.CopyToAsync(audioServiseData.audiooutstream!); } finally { await audioServiseData.audiooutstream!.FlushAsync(); }
-                //var s = new RawSourceWaveStream(output, new WaveFormat(48000, 2));
-                //WaveFileWriter.CreateWaveFile("pcmtest.wav", s);
+                string audiofile = $"{Directory.GetCurrentDirectory()}/audiofile/{guildid}.wav";
+                audioServiseData.VoicevoxEngineApi!.WriteInfo();
+                using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.Id, text))
+                using (var wfr = new WaveFileReader(wavstream))
+                {
+                    WaveFileWriter.CreateWaveFile(audiofile, wfr);
+                }
+
+                Process process = CreateStream(guildid);
+                using (var output = process.StandardOutput.BaseStream)
+                //using (var output = new MemoryStream())
+                {
+                    try
+                    {
+                        await audioServiseData.audioclient!.SetSpeakingAsync(true);
+                        //await Cli.Wrap($"{ffmpegdir}/ffmpeg.exe").WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1").WithStandardInputPipe(PipeSource.FromStream(wavstream)).WithStandardOutputPipe(PipeTarget.ToStream(output)).WithValidation(CommandResultValidation.None).ExecuteAsync();
+                        await output.CopyToAsync(audioServiseData.audiooutstream!);
+                    }
+                    finally
+                    {
+                        await audioServiseData.audiooutstream!.FlushAsync();
+                        await audioServiseData.audioclient!.SetSpeakingAsync(false);
+                    }
+                }
+                process.Kill();
             }
-            process.Kill();
+            catch(Exception ex) 
+            {
+                Console.WriteLine(ex.ToString());
+            }
 
             audioServiseData.m_IsSpeaking = false;
         }
@@ -231,7 +274,8 @@ namespace voicevox_discord
         {
             string ffmpegdir = $"{Directory.GetCurrentDirectory()}/audiofile";
 
-            return Process.Start(new ProcessStartInfo {
+            return Process.Start(new ProcessStartInfo 
+            {
                 FileName = $"ffmpeg",
                 Arguments = $"-hide_banner -loglevel panic -i \"{ffmpegdir}/{guildid}.wav\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
