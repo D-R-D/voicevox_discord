@@ -1,6 +1,7 @@
 ﻿using CliWrap;
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using System.Xml.Linq;
@@ -63,7 +64,6 @@ namespace voicevox_discord
 
         //
         //スラッシュコマンドのイベント処理
-        [Command(RunMode = RunMode.Async)]
         private async Task SlashCommandHandler(SocketSlashCommand command)
         {
             _ = Task.Run(async () => 
@@ -88,7 +88,7 @@ namespace voicevox_discord
 
                     if (commandname == "voice")
                     {
-                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, commandname);
+                        menuBuilder = await SelectMenuEditor.CreateEngineMenu(0, commandname);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync($"[/{commandname}]\n以下の選択肢からエンジンを選択してください", components: builder.Build(), ephemeral: true);
@@ -107,7 +107,7 @@ namespace voicevox_discord
                         return;
                     }
                     if (commandname == "setspeaker") {
-                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, commandname);
+                        menuBuilder = await SelectMenuEditor.CreateEngineMenu(0, commandname);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync($"[/{commandname}]\n以下の選択肢からエンジンを選択してください", components: builder.Build(), ephemeral: true);
@@ -136,7 +136,7 @@ namespace voicevox_discord
                     if(commandname == "dict")
                     {
                         //エンジンのリストを作成
-                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, commandname);
+                        menuBuilder = await SelectMenuEditor.CreateEngineMenu(0, commandname);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync($"[/{commandname}]\n以下の選択肢からエンジンを選択してください" , components: builder.Build(), ephemeral: true);
@@ -146,7 +146,7 @@ namespace voicevox_discord
                     if(commandname == "reload")
                     {
                         //エンジンのリストを作成
-                        menuBuilder = SelectMenuEditor.CreateEngineMenu(0, commandname);
+                        menuBuilder = await SelectMenuEditor.CreateEngineMenu(0, commandname);
                         builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                         await command.RespondAsync($"[/{commandname}]\n以下の選択肢からエンジンを選択してください", components: builder.Build(), ephemeral: true);
@@ -196,11 +196,32 @@ namespace voicevox_discord
                     string CommandMode = CustomID.Last();
 
                     var respondcontent = await selectMenuController.BuildComponent();
+                    //
+                    /*--------------------エラー処理--------------------*/
                     if (respondcontent.label == null && respondcontent.builder == null)
                     {
                         await arg.RespondAsync("値の破損を確認しました。処理をスキップします。");
                         return;
                     }
+
+                    if(respondcontent.label == "FailedEngine")
+                    {
+                        try
+                        {
+                            Settings.Shared.m_EngineDictionary[InnerCommandValue].LoadSpeakers();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            await arg.RespondAsync($"[{InnerCommandValue}]:エラーが発生したかわら話者リストを再読み込みたけど失敗した。\n{ex.Message}");
+                            return;
+                        }
+
+                        await arg.RespondAsync($"[{InnerCommandValue}]:エラーが発生したから話者リスト再読み込みしたよ。");
+                        return;
+                    }
+                    /*--------------------エラー処理--------------------*/
+                    //
 
                     if (respondcontent.label == "dict")
                     {
@@ -215,7 +236,16 @@ namespace voicevox_discord
 
                     if (respondcontent.label == "reload")
                     {
-                        Settings.Shared.m_EngineDictionary[InnerCommandValue].LoadSpeakers();
+                        try
+                        {
+                            Settings.Shared.m_EngineDictionary[InnerCommandValue].LoadSpeakers();
+                        }
+                        catch(Exception ex)
+                        {
+                            Console.WriteLine(ex.ToString());
+                            await arg.RespondAsync(ex.Message);
+                            return;
+                        }
 
                         await arg.RespondAsync($"{InnerCommandValue}:Reload Finished!!");
                         return;
@@ -331,7 +361,8 @@ namespace voicevox_discord
                         await modal.ModifyOriginalResponseAsync(m => { m.Content = $"辞書登録が完了しました。\n```\nTargetEngine:{engineName}\nsurface:{surface}\npronunciation:{pronunciation}\n```"; });
                         return;
                     }
-                } catch (Exception ex) 
+                } 
+                catch (Exception ex) 
                 {
                     Console.WriteLine(ex.ToString());
                     await modal.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });

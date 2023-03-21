@@ -27,7 +27,18 @@ namespace voicevox_discord
         public static VoicevoxEngineApi Create(string ipAddress, int port, string name)
         {
             var instance = new VoicevoxEngineApi(ipAddress, port, name);
-            instance.LoadSpeakers();
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    instance.LoadSpeakers();
+                    break;
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
             return instance;
         }
 
@@ -52,20 +63,24 @@ namespace voicevox_discord
 
             if (!res.IsSuccessStatusCode)
             {
-                Console.WriteLine(res);
-                return false;
+                throw new Exception(message: $"[{m_EngineName}]:サーバーに接続できませんでした。");
             }
 
-            await Task.CompletedTask;
             return true;
         }
 
         //
         //渡されたurlからGetする
-        private static async Task<string> GetFromApi(string url)
+        private async Task<string> GetFromApi(string url)
         {
             HttpClient client = new HttpClient();
             var result = await client.GetAsync(url);
+
+            if(!result.IsSuccessStatusCode)
+            {
+                throw new Exception(message: $"[{m_EngineName}]:サーバーに接続できませんでした。");
+            }
+
             return await result.Content.ReadAsStringAsync();
         }
 
@@ -82,6 +97,11 @@ namespace voicevox_discord
 
             var res = await client.PostAsync(@$"http://{m_EngineIPAddress}:{m_EnginePort}/synthesis?speaker=" + id, conjson);
 
+            if (!res.IsSuccessStatusCode)
+            {
+                throw new Exception($"[{m_EngineName}]:サーバーに接続できませんでした。");
+            }
+
             return await res.Content.ReadAsStreamAsync();
         }
 
@@ -89,7 +109,8 @@ namespace voicevox_discord
         {
             var speakers = await GetSpeakers();
             var id = speakers.Where(_ => _.name == name).FirstOrDefault()?.styles.Where(_ => _.name == style).FirstOrDefault()?.id;
-            if (id == null) {
+            if (id == null) 
+            {
                 throw new Exception($"speakerIDが存在しません。");
             }
             return id!.Value;

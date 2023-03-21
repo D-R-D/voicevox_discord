@@ -15,7 +15,7 @@ namespace voicevox_discord
         /// <param name="page"></param>
         /// <param name="voiceChannel"></param>
         /// <returns></returns>
-        public static SelectMenuBuilder CreateEngineMenu(int page, string CommandMode)
+        public static async Task<SelectMenuBuilder> CreateEngineMenu(int page, string CommandMode)
         {
             SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧 p.{page}").WithCustomId($"engine:{CommandMode}").WithMinValues(1).WithMaxValues(1);
             
@@ -29,7 +29,7 @@ namespace voicevox_discord
             {
                 try
                 {
-                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"No any info.");
+                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"{(await Settings.Shared.m_EngineDictionary[engineName].GetSpeakers()).Count()} params found.");
                 }
                 catch (Exception ex)
                 {

@@ -27,7 +27,7 @@ namespace voicevox_discord
             {
                 if(InnerCommandName == "page")
                 {
-                    var menuBuilder = SelectMenuEditor.CreateEngineMenu(int.Parse(InnerCommandValue), CommandMode);
+                    var menuBuilder = await SelectMenuEditor.CreateEngineMenu(int.Parse(InnerCommandValue), CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                     return ($"[/{CommandMode}]\n以下の選択肢からエンジンを選択してください", builder);
@@ -35,12 +35,17 @@ namespace voicevox_discord
 
                 if(InnerCommandName == "engine")
                 {
-                    if(CommandMode == "dict")
+                    if (CommandMode == "reload")
                     {
                         return (CommandMode, null);
                     }
 
-                    if(CommandMode == "reload")
+                    if ((await Settings.Shared.m_EngineDictionary[InnerCommandValue].GetSpeakers()).Count() <= 0)
+                    {
+                        return ("FailedEngine", null);
+                    }
+
+                    if(CommandMode == "dict")
                     {
                         return (CommandMode, null);
                     }

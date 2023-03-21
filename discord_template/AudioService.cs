@@ -47,9 +47,7 @@ namespace voicevox_discord
                         {
                             rejoin = true;
 
-                            await audioServiceData.audioclient.StopAsync();
-                            audioServiceData.m_IsSpeaking = false;
-                            audioServiceData.voiceChannel = null;
+                            await LeaveAsync(guildid);
                         }
                     }
 
@@ -60,7 +58,12 @@ namespace voicevox_discord
                 {
                     Console.WriteLine(ex.ToString());
                     await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
+
+                    return;
                 }
+
+                await command.DeleteOriginalResponseAsync();
+                return;
             }
 
             if (firstval == "leave") 
@@ -75,15 +78,12 @@ namespace voicevox_discord
 
                 return;
             }
-
-            await command.DeleteOriginalResponseAsync();
         }
 
-        private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid)
+        private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid) 
         {
             audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
             audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed, packetLoss: 10);
-            audioServiseData.audioclient.Disconnected += Audioclient_Disconnected;
 
             _ = Task.Run(async () =>
             {
@@ -97,7 +97,8 @@ namespace voicevox_discord
                 try 
                 {
                     await PlayAudio(audioServiseData, guildid, text);
-                } catch (Exception ex) 
+                }
+                catch (Exception ex) 
                 {
                     Console.WriteLine(ex.ToString());
                 }
@@ -111,20 +112,8 @@ namespace voicevox_discord
         private async Task LeaveAsync(ulong guildid)
         {
             AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
-            await audioServiseData.audioclient!.StopAsync();
-
             audioServiseData.voiceChannel = null;
-            return;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="arg"></param>
-        /// <returns></returns>
-        private async Task Audioclient_Disconnected(Exception arg)
-        {
-            await Task.CompletedTask;
+            await audioServiseData.audioclient!.StopAsync();
         }
 
         /// <summary>

@@ -70,7 +70,8 @@ namespace voicevox_discord
 
             #region XMLファイルからのエンジンリスト読み込み
             var engineDictionary = new Dictionary<string, VoicevoxEngineApi>();
-            try {
+            try 
+            {
                 XElement engine_element = XElement.Load($"{Directory.GetCurrentDirectory()}/{XmlFileName}");
 
                 foreach (var engine in engine_element.Elements("engine"))
@@ -85,8 +86,10 @@ namespace voicevox_discord
 
                     Console.WriteLine(engine.Element("ipaddress")!.Value + " : " + int.Parse(engine.Element("port")!.Value));
                 }
-            } catch {
-                throw;
+            } 
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
             m_EngineDictionary = engineDictionary;
             #endregion
