@@ -74,7 +74,6 @@ namespace voicevox_discord
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
                 await LeaveAsync(guildid);
-                audioServiceData.voiceChannel = null;
 
                 return;
             }
@@ -84,6 +83,7 @@ namespace voicevox_discord
         {
             audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
             audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed, packetLoss: 10);
+            audioServiseData.m_IsSpeaking = false;
 
             _ = Task.Run(async () =>
             {
@@ -113,6 +113,7 @@ namespace voicevox_discord
         {
             AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
             audioServiseData.voiceChannel = null;
+            audioServiseData.m_IsSpeaking = false;
             await audioServiseData.audioclient!.StopAsync();
         }
 

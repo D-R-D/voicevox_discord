@@ -23,6 +23,8 @@ namespace voicevox_discord
         public string StyleName { get; private set; } = "ノーマル";
         public int Id { get; private set; } = 2;
         public bool m_IsSpeaking = false;
+        public Queue<string> m_MessageQueue = new Queue<string>();
+        public VoicevoxEngineApi? VoicevoxEngineApi { get; private set; } = Settings.Shared.m_EngineDictionary[DefaultEngineName];
 
         private Cache<ChatGpt, AudioServiceData> ChachedChatGPT = new Cache<ChatGpt, AudioServiceData>(_ => 
         {
@@ -33,8 +35,6 @@ namespace voicevox_discord
         });
 
         public ChatGpt ChatGpt => ChachedChatGPT.Get(this);
-
-        public VoicevoxEngineApi? VoicevoxEngineApi { get; private set; } = Settings.Shared.m_EngineDictionary[DefaultEngineName];
 
         public IVoiceChannel? voiceChannel { get; set; } = null;
         public IAudioClient? audioclient { get; set; } = null;
