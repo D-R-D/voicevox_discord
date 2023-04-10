@@ -1,5 +1,4 @@
-﻿using System.Runtime.Serialization.Formatters.Binary;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace voicevox_discord
 {

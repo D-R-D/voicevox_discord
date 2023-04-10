@@ -1,8 +1,4 @@
-﻿using Discord;
-using System;
-using System.Configuration;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks.Dataflow;
+﻿using System.Configuration;
 using System.Xml.Linq;
 
 namespace voicevox_discord
@@ -14,6 +10,7 @@ namespace voicevox_discord
 
 
         private static Cache<Settings> CachedSettings = new Cache<Settings>(() => new Settings());
+        //機能の変数化？
         public static Settings Shared => CachedSettings.Value;
 
 
