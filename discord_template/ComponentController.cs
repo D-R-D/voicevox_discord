@@ -30,7 +30,7 @@ namespace voicevox_discord
                     var menuBuilder = await SelectMenuEditor.CreateEngineMenu(int.Parse(InnerCommandValue), CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
-                    return ($"[/{CommandMode}]\n以下の選択肢からエンジンを選択してください", builder);
+                    return ($"[/{CommandMode}](p.{InnerCommandValue})\n以下の選択肢からエンジンを選択してください", builder);
                 }
 
                 if(InnerCommandName == "engine")
@@ -45,7 +45,7 @@ namespace voicevox_discord
                         return ("FailedEngine", null);
                     }
 
-                    if(CommandMode == "dict")
+                    if (CommandMode.Split('.')[0] == "dict")
                     {
                         return (CommandMode, null);
                     }
@@ -53,7 +53,7 @@ namespace voicevox_discord
                     var menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(InnerCommandValue, 0, CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
-                    return ($"[/{CommandMode}]@{InnerCommandValue.ToUpper()}\n以下の選択肢から話者を選択してください", builder);
+                    return ($"[/{CommandMode}]@{InnerCommandValue.ToUpper()}(p.0)\n以下の選択肢から話者を選択してください", builder);
                 }
             }
 
@@ -64,7 +64,7 @@ namespace voicevox_discord
                     var menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(CustomID[1], int.Parse(InnerCommandValue), CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
-                    return ($"[/{CommandMode}]@{InnerCommandValue.ToUpper()}\n以下の選択肢から話者を選択してください", builder);
+                    return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}(p.{InnerCommandValue})\n以下の選択肢から話者を選択してください", builder);
                 }
 
                 if(InnerCommandName == "speaker")
@@ -72,7 +72,7 @@ namespace voicevox_discord
                     var menuBuilder = await SelectMenuEditor.CreateStyleMenu(CustomID[1], InnerCommandValue, 0, CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
-                    return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}:{InnerCommandValue}\n以下の選択肢から話者のスタイルを選択してください", builder);
+                    return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}:{InnerCommandValue}(p.0)\n以下の選択肢から話者のスタイルを選択してください", builder);
                 }
             }
 
@@ -84,7 +84,7 @@ namespace voicevox_discord
                     var menuBuilder = await SelectMenuEditor.CreateStyleMenu(CustomID[1], InnerCommandValue, int.Parse(InnerCommandValue), CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
-                    return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}:{InnerCommandValue}\n以下の選択肢からスタイルを選択してください", builder);
+                    return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}(p.{InnerCommandValue})\n以下の選択肢からスタイルを選択してください", builder);
                 }
                 
                 if(InnerCommandName == "id")

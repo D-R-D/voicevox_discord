@@ -37,6 +37,7 @@ namespace voicevox_discord
                     if (((IVoiceState)command.User).VoiceChannel == null)
                     {
                         await command.ModifyOriginalResponseAsync(m => { m.Content = "有効ボイスチャンネル ゼロ\nイグジット完了…\n…止まった"; });
+
                         return;
                     }
 
@@ -46,7 +47,6 @@ namespace voicevox_discord
                         if (audioServiceData.audioclient.ConnectionState == ConnectionState.Connected)
                         {
                             rejoin = true;
-
                             await LeaveAsync(guildid);
                         }
                     }
@@ -78,7 +78,7 @@ namespace voicevox_discord
                 return;
             }
         }
-
+        
         private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid) 
         {
             audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
@@ -115,6 +115,8 @@ namespace voicevox_discord
             audioServiseData.voiceChannel = null;
             audioServiseData.m_IsSpeaking = false;
             await audioServiseData.audioclient!.StopAsync();
+
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -236,12 +238,10 @@ namespace voicevox_discord
 
                 Process process = CreateStream(guildid);
                 using (var output = process.StandardOutput.BaseStream)
-                //using (var output = new MemoryStream())
                 {
                     try
                     {
                         await audioServiseData.audioclient!.SetSpeakingAsync(true);
-                        //await Cli.Wrap($"{ffmpegdir}/ffmpeg.exe").WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1").WithStandardInputPipe(PipeSource.FromStream(wavstream)).WithStandardOutputPipe(PipeTarget.ToStream(output)).WithValidation(CommandResultValidation.None).ExecuteAsync();
                         await output.CopyToAsync(audioServiseData.audiooutstream!);
                     }
                     finally

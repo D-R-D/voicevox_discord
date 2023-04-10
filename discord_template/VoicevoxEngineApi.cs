@@ -63,10 +63,26 @@ namespace voicevox_discord
 
             if (!res.IsSuccessStatusCode)
             {
-                throw new Exception(message: $"[{m_EngineName}]:サーバーに接続できませんでした。");
+                return false;
             }
 
             return true;
+        }
+
+        //
+        //ユーザー辞書を取得する
+        public async Task<string> GetUserDictionary()
+        {
+            try
+            {
+                string result = await GetFromApi($"http://{m_EngineIPAddress}:{m_EnginePort}/user_dict");
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
         //
@@ -78,7 +94,7 @@ namespace voicevox_discord
 
             if(!result.IsSuccessStatusCode)
             {
-                throw new Exception(message: $"[{m_EngineName}]:サーバーに接続できませんでした。");
+                return "サーバーへ正常に接続できませんでした。";
             }
 
             return await result.Content.ReadAsStringAsync();

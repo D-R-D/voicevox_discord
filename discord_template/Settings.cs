@@ -14,6 +14,7 @@ namespace voicevox_discord
 
 
         private static Cache<Settings> CachedSettings = new Cache<Settings>(() => new Settings());
+        //機能の変数化？
         public static Settings Shared => CachedSettings.Value;
 
 
