@@ -133,24 +133,28 @@ namespace voicevox_discord
 
         public async Task<Speaker[]> GetSpeakers()
         {
-            while (m_Speakers == null) {
+            while (m_Speakers == null)
+            {
                 await Task.Yield();
             }
             return m_Speakers.ToArray();
         }
         public async Task<Speaker[]> GetSpeakers(int page)
         {
-            while (m_Speakers == null) {
+            while (m_Speakers == null)
+            {
                 await Task.Yield();
             }
             return m_Speakers.ToArray().Skip(16 * page).Take(16).ToArray();
         }
         public async Task<bool> SpeakerPageExist(int page)
         {
-            if (page < 0) {
+            if (page < 0)
+            {
                 return false;
             }
-            while (m_Speakers == null) {
+            while (m_Speakers == null)
+            {
                 await Task.Yield();
             }
             return m_Speakers.ToArray().Length > page * 16;

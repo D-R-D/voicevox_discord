@@ -164,17 +164,16 @@ namespace voicevox_discord
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
 
-            if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
-            {
-                await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
-                return;
-            }
-
             try 
             {
                 string response = await audioServiceData.ChatGpt.RequestSender(text);
                 await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
-                await PlayAudio(audioServiceData, guildid, response);
+
+                if (audioServiceData.audioclient != null)
+                if (audioServiceData.audioclient!.ConnectionState == ConnectionState.Connected)
+                { 
+                    await PlayAudio(audioServiceData, guildid, response);
+                }
             }
             catch (Exception ex)
             {

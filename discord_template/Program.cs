@@ -9,7 +9,7 @@ namespace voicevox_discord
     class Program
     {
         private static AudioService s_AudioService = new AudioService();
-        private DiscordSocketClient? _client;
+        private static DiscordSocketClient? _client;
         private static CommandService? _commands;
 
         public static void Main(string[] args)
