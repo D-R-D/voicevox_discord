@@ -11,9 +11,7 @@ namespace voicevox_discord
         public void init()
         {
             checkdir("commands");
-
-            checkdir("ffmpeg");
-            checkdir("ffmpeg/audiofile");
+            checkdir("audiofile");
         }
 
         private void checkdir(string dirname)
@@ -21,6 +19,14 @@ namespace voicevox_discord
             if (!Directory.Exists($"{Directory.GetCurrentDirectory()}/{dirname}"))
             {
                 Directory.CreateDirectory($"{Directory.GetCurrentDirectory()}/{dirname}");
+            }
+        }
+
+        private void checkfile(string filename)
+        {
+            if (!File.Exists($"{Directory.GetCurrentDirectory()}/{filename}"))
+            {
+                File.Create($"{Directory.GetCurrentDirectory()}/{filename}");
             }
         }
     }

@@ -1,33 +1,35 @@
 ﻿using Discord;
-using Newtonsoft.Json;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace voicevox_discord
 {
     internal class SelectMenuEditor
     {
-        public static SelectMenuBuilder CreateSpeakerMenu(List<Dictionary<string,object>> pagedspeakers, string page, string corename, bool voicechannel = false)
+        /// <summary>
+        /// エンジン一覧
+        /// CustomId == "engine : {commandmode]"
+        /// 
+        /// ：ページ選択時：
+        /// OptionValue == "page @ {pageNumber}"
+        /// OptionValue == "engine @ {engineName}"
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="voiceChannel"></param>
+        /// <returns></returns>
+        public static async Task<SelectMenuBuilder> CreateEngineMenu(int page, string CommandMode)
         {
-            string commandmode = "0";
-            if (voicechannel) { commandmode = "1"; }
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId($"speaker:{corename}:{commandmode}").WithMinValues(1).WithMaxValues(1);
-            int nowpage =int.Parse(page);
-
-            if(nowpage > 0) 
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧 p.{page}").WithCustomId($"engine:{CommandMode}").WithMinValues(1).WithMaxValues(1);
+            
+            var engines = Settings.Shared.m_EngineDictionary.Keys.Skip(16 * page).Take(16).ToArray();
+            if (page > 0)
             {
-                builder.AddOption("Previous page.", $"page@{nowpage - 1}", $"Go to page {(int.Parse(page) - 1)}."); 
+                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
             }
 
-            foreach (KeyValuePair<string, object> speaker in pagedspeakers[int.Parse(page)])
+            foreach ( var engineName in engines )
             {
                 try
                 {
-                    builder.AddOption(speaker.Key, $"speaker@{speaker.Key}", $"{((Dictionary<string,string>)speaker.Value).Count} params found.");
+                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"{(await Settings.Shared.m_EngineDictionary[engineName].GetSpeakers()).Count()} params found.");
                 }
                 catch (Exception ex)
                 {
@@ -35,31 +37,96 @@ namespace voicevox_discord
                 }
             }
 
-            if(nowpage < (pagedspeakers.Count - 1))
+            if (Settings.Shared.m_EngineDictionary.Keys.ToArray().Count() > (16 * (page + 1)))
             {
-                builder.AddOption("Next page.", $"page@{nowpage + 1}", $"Go to page {nowpage + 1}.");
+                builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
             }
 
             return builder;
         }
 
-        public static SelectMenuBuilder CreateStyleMenu(Dictionary<string,object> speaker, string speakername, string corename, bool voicechannel = false)
-        {
-            string commandmode = "0";
-            if (voicechannel) { commandmode = "1"; }
-            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder("スタイル一覧").WithCustomId($"speaker_id:{corename}:{commandmode}").WithMinValues(1).WithMaxValues(1);
-            Dictionary<string,string> styles = new Dictionary<string, string>((Dictionary<string,string>)speaker[speakername]);
 
-            foreach (KeyValuePair<string, string> style in styles)
+        /// <summary>
+        /// 話者一覧
+        /// CustomId == "speaker_id : {engineName} : {commandmode]"
+        /// 
+        /// ：ページ選択時：
+        /// OptionValue == "page@{pageNumber}"
+        /// OptionValue == "speaker@{speakerName}"
+        /// </summary>
+        /// <param name="engineName"></param>
+        /// <param name="page"></param>
+        /// <param name="voiceChannel"></param>
+        /// <returns></returns>
+        public async static Task<SelectMenuBuilder> CreateSpeakerMenu(string engineName, int page, string CommandMode)
+        {
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"話者一覧 p.{page}").WithCustomId($"speaker:{engineName}:{CommandMode}").WithMinValues(1).WithMaxValues(1);
+
+            if (page > 0)
+            {
+                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
+            }
+
+            var speakers = await Settings.Shared.m_EngineDictionary[engineName].GetSpeakers(page);
+
+            foreach (var speaker in speakers)
             {
                 try
                 {
-                    builder.AddOption(style.Key, $"id@{speakername}@{style.Key}", $"selected speaker : {speakername}");
+                    builder.AddOption(speaker.name, $"speaker@{speaker.name}", $"{speaker.styles.Count} params found.");
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            if (await Settings.Shared.m_EngineDictionary[engineName].SpeakerPageExist(page + 1))
+            {
+                builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
+            }
+
+            return builder;
+        }
+
+        /// <summary>
+        /// 話者のスタイル一覧
+        /// CustomId == "speaker_id : {engineName} : {speakerName} : {commandmode]"
+        /// 
+        /// ：ページ選択時：
+        /// OptionValue == "page@{pageNumber}"
+        /// OptionValue == "id@{speakerName}@{styleName}"
+        /// </summary>
+        /// <param name="engineName"></param>
+        /// <param name="speakerName"></param>
+        /// <param name="page"></param>
+        /// <param name="CommandMode"></param>
+        /// <returns></returns>
+        public async static Task<SelectMenuBuilder> CreateStyleMenu(string engineName, string speakerName, int page, string CommandMode)
+        {
+            SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"スタイル一覧 p.{page}").WithCustomId($"speaker_id:{engineName}:{speakerName}:{CommandMode}").WithMinValues(1).WithMaxValues(1);
+
+            if (page > 0)
+            {
+                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
+            }
+
+            var styles = await Settings.Shared.m_EngineDictionary[engineName].GetStyles(speakerName, page);
+
+            foreach (var style in styles) 
+            {
+                try
+                {
+                    builder.AddOption(style.name, $"id@{style.name}", $"selected speaker : {speakerName}");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
                 }
+            }
+
+            if (await Settings.Shared.m_EngineDictionary[engineName].StylePageExist(speakerName, page + 1))
+            {
+                builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
             }
 
             return builder;

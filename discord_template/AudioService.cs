@@ -1,203 +1,277 @@
 ﻿using Discord;
 using Discord.Audio;
 using Discord.WebSocket;
-using NAudio.MediaFoundation;
 using NAudio.Wave;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using CliWrap;
-using Discord.Audio.Streams;
-using System;
 
 namespace voicevox_discord
 {
     internal class AudioService
     {
-        private IVoiceChannel? voiceChannel = null;
-        private IAudioClient? audioclient = null;
-        internal KeyValuePair<string, int> name_id_pair = new("voicevox:四国めたん:ノーマル", 2);
-        private AudioOutStream? audiooutstream = null;
-        private VoicevoxEngineApi? voicevoxEngineApi = null;
+        internal Dictionary<ulong, AudioServiceData> GuildAudioServiceDict = new Dictionary<ulong, AudioServiceData>();
 
-        public void initengine(VoicevoxEngineApi _voicevoxEngineApi)
+        public AudioServiceData GetOrCreateAudioServiceData(ulong guildid)
         {
-            voicevoxEngineApi = _voicevoxEngineApi;
-        }
-
-        public void SetSpeaker(string name, int id)
-        {
-            if (Tools.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
-            name_id_pair = new KeyValuePair<string, int>(name, id);
-
-            Console.WriteLine(name + " : " + id);
-
-            if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
+            if (!GuildAudioServiceDict.ContainsKey(guildid)) 
             {
-                return;
+                GuildAudioServiceDict.Add(guildid, new AudioServiceData());
+                GuildAudioServiceDict[guildid].SetSavedSpeaker(guildid);
             }
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await PlayAudio(voicevoxEngineApi!, $"変わりまして{name_id_pair.Key.Split(":")[1]}です。{name_id_pair.Key.Split(":")[2]}な感じで行きますね。");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            });
+            
+            return GuildAudioServiceDict[guildid];
         }
-        public async Task<bool> CommandRunner(SocketSlashCommand command, string firstval)
+
+
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="firstval"></param>
+        /// <returns></returns>
+        public async Task JoinOperation(SocketSlashCommand command, string firstval)
         {
+            ulong guildid = command.GuildId!.Value;
+            AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
+
             if (firstval == "join")
             {
                 try
                 {
-                    bool rejoin = false;
-                    if (audioclient != null)
+                    if (((IVoiceState)command.User).VoiceChannel == null)
                     {
-                        if (audioclient!.ConnectionState == ConnectionState.Connected)
+                        await command.ModifyOriginalResponseAsync(m => { m.Content = "有効ボイスチャンネル ゼロ\nイグジット完了…\n…止まった"; });
+
+                        return;
+                    }
+
+                    bool rejoin = false;
+                    if (audioServiceData.audioclient != null)
+                    {
+                        if (audioServiceData.audioclient.ConnectionState == ConnectionState.Connected)
                         {
                             rejoin = true;
-
-                            await audioclient!.StopAsync();
-                            voiceChannel = null;
+                            await LeaveAsync(guildid);
                         }
                     }
-                    voiceChannel = ((IVoiceState)command.User).VoiceChannel;
-                    await JoinChannel(rejoin);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                    await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
 
-                    return false;
-                }
-
-                return true;
-            }
-
-            if (firstval == "leave")
-            {
-                if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
-                {
-                    await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
-                    return false;
-                }
-                await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
-                await LeaveAsync();
-                voiceChannel = null;
-
-                return false;
-            }
-
-            return false;
-        }
-
-        public async Task JoinChannel(bool rejoin)
-        {
-            audioclient = await voiceChannel!.ConnectAsync().ConfigureAwait(false);
-            audiooutstream = audioclient.CreatePCMStream(AudioApplication.Mixed);
-            audioclient.Disconnected += Audioclient_Disconnected;
-
-            _ = Task.Run(async () =>
-            {
-                string text = $"{name_id_pair.Key.Split(":")[1]}です。{name_id_pair.Key.Split(":")[2]}な感じで行きますね。";
-
-                if (rejoin)
-                {
-                    text = $"{name_id_pair.Key.Split(":")[1]}です。再起動してきました。";
-                }
-
-
-                try
-                {
-                    await PlayAudio(voicevoxEngineApi!, text);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            });
-        }
-        private async Task Audioclient_Disconnected(Exception arg)
-        {
-            audioclient!.Dispose();
-            voiceChannel = null;
-
-            await Task.CompletedTask;
-        }
-
-        public async Task LeaveAsync()
-        {
-            await audioclient!.StopAsync();
-
-            voiceChannel = null;
-            return;
-        }
-
-        public async Task TextReader(SocketSlashCommand command, string text)
-        {
-            if (audioclient == null || audioclient!.ConnectionState != ConnectionState.Connected)
-            {
-                await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
-
-                return;
-            }
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await PlayAudio(voicevoxEngineApi!, text);
-                }
-                catch (Exception ex)
+                    audioServiceData.voiceChannel = ((IVoiceState)command.User).VoiceChannel;
+                    await JoinChannel(rejoin, audioServiceData, guildid);
+                } 
+                catch (Exception ex) 
                 {
                     Console.WriteLine(ex.ToString());
                     await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
 
                     return;
                 }
-            });
 
+                await command.DeleteOriginalResponseAsync();
+                return;
+            }
+
+            if (firstval == "leave") 
+            {
+                if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
+                {
+                    await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
+                }
+                await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
+                await LeaveAsync(guildid);
+
+                return;
+            }
+        }
+        
+        private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid) 
+        {
+            audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
+            audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed, packetLoss: 10);
+            audioServiseData.IsSpeaking = false;
+
+            _ = Task.Run(async () =>
+            {
+                string text = $"{audioServiseData.GuildSpeakerInfo.name}です。{audioServiseData.GuildSpeakerInfo.style}な感じで行きますね。";
+
+                if (rejoin)
+                {
+                    text = $"{audioServiseData.GuildSpeakerInfo.name}です。再起動してきました。";
+                }
+
+                try 
+                {
+                    await PlayAudio(audioServiseData, guildid, text);
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private async Task LeaveAsync(ulong guildid)
+        {
+            AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
+            audioServiseData.voiceChannel = null;
+            audioServiseData.IsSpeaking = false;
+            await audioServiseData.audioclient!.StopAsync();
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// setting
+        /// </summary>
+        /// <param name="guildid"></param>
+        /// <param name="engineName"></param>
+        /// <param name="speakerName"></param>
+        /// <param name="styleName"></param>
+        /// <param name="id"></param>
+        public void SetSpeaker(ulong guildid, string speakerName, string styleName, int id, string engineName)
+        {
+            var target = GetOrCreateAudioServiceData(guildid);
+            target.SetSpeaker(engineName, speakerName, styleName, id);
+            target.SaveSpeaker(guildid);
+
+            Console.WriteLine(speakerName + " : " + id);
+
+            if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try 
+                {
+                    await PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="OPENAI_APIKEY"></param>
+        /// <param name="text"></param>
+        /// <param type="role"></param>
+        /// <returns></returns>
+        public async Task Chat(SocketSlashCommand command, string text)
+        {
+            ulong guildid = command.GuildId!.Value;
+            AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
+
+            try 
+            {
+                string response = await audioServiceData.ChatGpt.RequestSender(text);
+                await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
+
+                if (audioServiceData.audioclient != null)
+                if (audioServiceData.audioclient!.ConnectionState == ConnectionState.Connected)
+                { 
+                    await PlayAudio(audioServiceData, guildid, response);
+                }
+            }
+            catch (Exception ex)
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content += $"\n{ex.Message}\n何故だ！\n俺にも分からない！！\n答えろ！！\n教えてくれ！！\n答えろ！！！\nボスぅぅ！！！！"; });
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        /// <summary>
+        /// use
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public async Task TextReader(SocketSlashCommand command, string text)
+        {
+            ulong guildid = command.GuildId!.Value;
+            AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
+
+            if (audioServiseData.audioclient == null || audioServiseData.audioclient!.ConnectionState != ConnectionState.Connected)
+            {
+                await command.ModifyOriginalResponseAsync(m => { m.Content = "チャンネルに接続できてないよ"; });
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try 
+                {
+                    await PlayAudio(audioServiseData, guildid, text);
+                } 
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
+                    return;
+                }
+            });
 
             await command.DeleteOriginalResponseAsync();
         }
 
 
-        private async Task PlayAudio(VoicevoxEngineApi _voicevoxEngineApi, string text)
+        private async Task PlayAudio(AudioServiceData audioServiseData, ulong guildid, string text)
         {
-            string audiofile = $"{Directory.GetCurrentDirectory()}/ffmpeg/audiofile/source.wav";
-            using (Stream wavstream = _voicevoxEngineApi!.GetWavFromApi(name_id_pair.Value.ToString(), text))
-            using (var wfr = new WaveFileReader(wavstream))
+            if (audioServiseData.IsSpeaking)
             {
-                WaveFileWriter.CreateWaveFile(audiofile, wfr);
+                return;
+            }
+            audioServiseData.IsSpeaking = true;
+
+            try
+            {
+                string audiofile = $"{Directory.GetCurrentDirectory()}/audiofile/{guildid}.wav";
+                audioServiseData.VoicevoxEngineApi!.WriteInfo();
+                using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.GuildSpeakerInfo.speakerId, text))
+                using (var wfr = new WaveFileReader(wavstream))
+                {
+                    WaveFileWriter.CreateWaveFile(audiofile, wfr);
+                }
+
+                Process process = CreateStream(guildid);
+                using (var output = process.StandardOutput.BaseStream)
+                {
+                    try
+                    {
+                        await audioServiseData.audioclient!.SetSpeakingAsync(true);
+                        await output.CopyToAsync(audioServiseData.audiooutstream!);
+                    }
+                    finally
+                    {
+                        await audioServiseData.audiooutstream!.FlushAsync();
+                        await audioServiseData.audioclient!.SetSpeakingAsync(false);
+                    }
+                }
+                process.Kill();
+            }
+            catch(Exception ex) 
+            {
+                Console.WriteLine(ex.ToString());
             }
 
-            Process process = CreateStream();
-            using (var output = process.StandardOutput.BaseStream)
-            //using (var output = new MemoryStream())
-            {
-                //await Cli.Wrap($"{ffmpegdir}/ffmpeg.exe").WithArguments(" -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1").WithStandardInputPipe(PipeSource.FromStream(wavstream)).WithStandardOutputPipe(PipeTarget.ToStream(output)).WithValidation(CommandResultValidation.None).ExecuteAsync();
-                try { await output.CopyToAsync(audiooutstream!); }
-                finally { await audiooutstream!.FlushAsync(); }
-                //var s = new RawSourceWaveStream(output, new WaveFormat(48000, 2));
-                //WaveFileWriter.CreateWaveFile("pcmtest.wav", s);
-            }
-            process.Kill();
+            audioServiseData.IsSpeaking = false;
         }
 
-        private Process CreateStream()
+        private Process CreateStream(ulong guildid)
         {
-            string ffmpegdir = $"{Directory.GetCurrentDirectory()}/ffmpeg";
+            string ffmpegdir = $"{Directory.GetCurrentDirectory()}/audiofile";
 
-            return Process.Start(new ProcessStartInfo
+            return Process.Start(new ProcessStartInfo 
             {
-                FileName = $"{ffmpegdir}/ffmpeg.exe",
-                Arguments = $"-hide_banner -loglevel panic -i \"{ffmpegdir}/audiofile/source.wav\" -ac 2 -f s16le -ar 48000 pipe:1",
+                FileName = $"ffmpeg",
+                Arguments = $"-hide_banner -loglevel panic -i \"{ffmpegdir}/{guildid}.wav\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true
             })!;

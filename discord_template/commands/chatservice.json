@@ -1,13 +1,13 @@
 {
-  "name": "read",
-  "description": "readtext",
+  "name": "chat",
+  "description": "chatcommand using chatgpt",
   "options": [
     {
       "name": "text",
       "description": "control command",
       "type": 3,
       "required": true,
-      "max_length": 1000
+      "max_length": 200
     }
   ]
 }

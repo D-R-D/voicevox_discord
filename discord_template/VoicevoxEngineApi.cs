@@ -1,119 +1,199 @@
-﻿using System.Text;
+﻿using Newtonsoft.Json;
+using System.Text;
 
 namespace voicevox_discord
 {
     internal class VoicevoxEngineApi
     {
-        private static string engine_ipaddress = string.Empty;
-        private static int engine_port = 0;
-        private static string engine_name = string.Empty;
+        private readonly string m_EngineIPAddress;
+        private readonly int m_EnginePort;
+        private readonly string m_EngineName;
 
+        private IList<Speaker>? m_Speakers;
         //
         //ipaddressとportを設定する
-        public VoicevoxEngineApi(string ipaddress, int port, string name)
+        public VoicevoxEngineApi(string ipAddress, int port, string name)
         {
-            if (Tools.IsNullOrEmpty(ipaddress)) { throw new ArgumentNullException("ipaddress"); }
+            if (Tools.IsNullOrEmpty(ipAddress)) { throw new ArgumentNullException("ipaddress"); }
             if (Tools.IsNotPortNumber(port)) { throw new Exception($"port がポート番号でない、もしくはNullです。"); }
             if (Tools.IsNullOrEmpty(name)) { throw new ArgumentNullException("name"); }
 
-            engine_ipaddress = ipaddress;
-            engine_port = port;
-            engine_name = name;
+            m_EngineIPAddress = ipAddress;
+            m_EnginePort = port;
+            m_EngineName = name;
         }
 
-        public void Info() 
+        public static VoicevoxEngineApi Create(string ipAddress, int port, string name)
         {
-            Console.WriteLine($"[{engine_name}]:{engine_ipaddress}:{engine_port}");
-        }
-
-        //
-        //話者リストをjson形式で取得する
-        public string GetSpeakersJson()
-        {
-            Console.WriteLine("["+ engine_name +"]:" +engine_ipaddress + ":" + engine_port);
-
-            if (Tools.IsNullOrEmpty(engine_ipaddress)) { throw new Exception($"{nameof(engine_ipaddress)}がNullもしくは空です。"); }
-            if (Tools.IsNotPortNumber(engine_port)) { throw new Exception($"{nameof(engine_port)}が不正な値({engine_port})です。"); }
-
-            string speaker_json = string.Empty;
-            ManualResetEvent waitingjson = new ManualResetEvent(false);
-
-            //VoicevoxEngineからjson形式の話者リストを取得する
-            Task.Run(async () =>
-            {
-                speaker_json = await GetProcessAsync();
-                waitingjson.Set();
-            });
-
-            waitingjson.WaitOne();
-            return speaker_json!;
-        }
-
-        //
-        //指定した情報でデータを取得できるまで粘る
-        private async Task<string> GetProcessAsync()
-        {
-            string speaker_json = string.Empty;
-
-            while (speaker_json == "" || speaker_json == null)
+            var instance = new VoicevoxEngineApi(ipAddress, port, name);
+            for (int i = 0; i < 10; i++)
             {
                 try
                 {
-                    speaker_json = await GetJsonFromApi($@"http://{engine_ipaddress}:{engine_port}/speakers");
+                    instance.LoadSpeakers();
+                    break;
                 }
-                catch (Exception ex)
+                catch(Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.ToString());
                 }
+            }
+            return instance;
+        }
 
-                Thread.Sleep(100);
+        public void WriteInfo()
+        {
+            Console.WriteLine($"[{m_EngineName}.Info]@{m_EngineIPAddress}:{m_EnginePort}");
+        }
+
+        public async void LoadSpeakers()
+        {
+            string json = await GetFromApi($@"http://{m_EngineIPAddress}:{m_EnginePort}/speakers");
+            m_Speakers = JsonConvert.DeserializeObject<IList<Speaker>>(json)!;
+        }
+
+        //
+        // ユーザー辞書登録を行う
+        public async Task<bool> SetUserDictionary(string surface, string pronunciation)
+        {
+            HttpClient client = new HttpClient();
+            StringContent content = new StringContent("", Encoding.UTF8, @"application/json");
+            var res = await client.PostAsync(@$"http://{m_EngineIPAddress}:{m_EnginePort}/user_dict_word?surface={surface}&pronunciation={pronunciation}&accent_type=1", content);
+
+            if (!res.IsSuccessStatusCode)
+            {
+                return false;
             }
 
-            return speaker_json!;
+            return true;
+        }
+
+        //
+        //ユーザー辞書を取得する
+        public async Task<string> GetUserDictionary()
+        {
+            try
+            {
+                string result = await GetFromApi($"http://{m_EngineIPAddress}:{m_EnginePort}/user_dict");
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
         //
         //渡されたurlからGetする
-        private static async Task<string> GetJsonFromApi(string url)
+        private async Task<string> GetFromApi(string url)
         {
             HttpClient client = new HttpClient();
             var result = await client.GetAsync(url);
 
-            return result.Content.ReadAsStringAsync().Result;
+            if(!result.IsSuccessStatusCode)
+            {
+                return "サーバーへ正常に接続できませんでした。";
+            }
+
+            return await result.Content.ReadAsStringAsync();
         }
 
         //
         //Wavファイルを取得してStreamで返す
-        public Stream GetWavFromApi(string id, string text)
+        public async Task<Stream> GetWavFromApi(int id, string text)
         {
-            Console.WriteLine("[" + engine_name + "]:" + engine_ipaddress + ":" + engine_port);
-            ManualResetEvent waitforwav = new ManualResetEvent(false);
-            Stream? wav = null;
+            HttpClient client = new HttpClient();
+            StringContent content = new StringContent("", Encoding.UTF8, @"application/json");
 
-            Task.Run(async () =>
+            var result = await client.PostAsync(@$"http://{m_EngineIPAddress}:{m_EnginePort}/audio_query?speaker=" + id + @"&text=" + text, content);
+            var json = await result.Content.ReadAsStringAsync();
+            StringContent conjson = new StringContent(json, Encoding.UTF8, @"application/json");
+
+            var res = await client.PostAsync(@$"http://{m_EngineIPAddress}:{m_EnginePort}/synthesis?speaker=" + id, conjson);
+
+            if (!res.IsSuccessStatusCode)
             {
-                try
-                {
-                    HttpClient client = new HttpClient();
-                    StringContent content = new StringContent("", Encoding.UTF8, @"application/json");
+                throw new Exception($"[{m_EngineName}]:サーバーに接続できませんでした。");
+            }
 
-                    var result = await client.PostAsync(@$"http://{engine_ipaddress}:{engine_port}/audio_query?speaker=" + id + @"&text=" + text, content);
-                    var json = await result.Content.ReadAsStringAsync();
-                    StringContent conjson = new StringContent(json, Encoding.UTF8, @"application/json");
+            return await res.Content.ReadAsStreamAsync();
+        }
 
-                    var res = await client.PostAsync(@$"http://{engine_ipaddress}:{engine_port}/synthesis?speaker=" + id, conjson);
+        public async Task<int> GetSpeakerId(string name, string style)
+        {
+            var speakers = await GetSpeakers();
+            var id = speakers.Where(_ => _.name == name).FirstOrDefault()?.styles.Where(_ => _.name == style).FirstOrDefault()?.id;
+            if (id == null) 
+            {
+                throw new Exception($"speakerIDが存在しません。");
+            }
+            return id!.Value;
+        }
 
-                    wav = await res.Content.ReadAsStreamAsync();
-                    waitforwav.Set();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            });
+        public async Task<Speaker[]> GetSpeakers()
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.ToArray();
+        }
+        public async Task<Speaker[]> GetSpeakers(int page)
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.ToArray().Skip(16 * page).Take(16).ToArray();
+        }
+        public async Task<bool> SpeakerPageExist(int page)
+        {
+            if (page < 0)
+            {
+                return false;
+            }
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.ToArray().Length > page * 16;
+        }
 
-            waitforwav.WaitOne();
-            return wav!;
+        public async Task<Style[]> GetStyles(string speakername, int page)
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.Where(_ => _.name == speakername).First().styles.ToArray().Skip(16 * page).Take(16).ToArray();
+        }
+        public async Task<bool> StylePageExist(string speakername, int page)
+        {
+            if (page < 0)
+            {
+                return false;
+            }
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.Where(_ => _.name == speakername).FirstOrDefault()!.styles.ToArray().Length > page * 16;
         }
     }
+
+#pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
+    internal class Speaker
+    {
+        public string name { get; set; }
+        public string speaker_uuid { get; set; }
+        public IList<Style> styles { get; set; }
+        public string version { get; set; }
+    }
+    internal class Style
+    {
+        public string name { get; set; }
+        public int id { get; set; }
+    }
+#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
 }

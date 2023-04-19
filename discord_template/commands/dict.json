@@ -1,0 +1,22 @@
+{
+  "name": "dict",
+  "description": "userdict ctrl",
+  "options": [
+    {
+      "name": "commandmode",
+      "description": "set or hhow",
+      "type": 3,
+      "required": true,
+      "choices": [
+        {
+          "name": "set",
+          "value": "set"
+        },
+        {
+          "name": "show",
+          "value": "show"
+        }
+      ]
+    }
+  ]
+}
