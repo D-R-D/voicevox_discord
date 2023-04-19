@@ -12,9 +12,12 @@ namespace voicevox_discord
 
         public AudioServiceData GetOrCreateAudioServiceData(ulong guildid)
         {
-            if (!GuildAudioServiceDict.ContainsKey(guildid)) {
+            if (!GuildAudioServiceDict.ContainsKey(guildid)) 
+            {
                 GuildAudioServiceDict.Add(guildid, new AudioServiceData());
+                GuildAudioServiceDict[guildid].SetSavedSpeaker(guildid);
             }
+            
             return GuildAudioServiceDict[guildid];
         }
 
@@ -83,15 +86,15 @@ namespace voicevox_discord
         {
             audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
             audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed, packetLoss: 10);
-            audioServiseData.m_IsSpeaking = false;
+            audioServiseData.IsSpeaking = false;
 
             _ = Task.Run(async () =>
             {
-                string text = $"{audioServiseData.Name}です。{audioServiseData.StyleName}な感じで行きますね。";
+                string text = $"{audioServiseData.GuildSpeakerInfo.name}です。{audioServiseData.GuildSpeakerInfo.style}な感じで行きますね。";
 
                 if (rejoin)
                 {
-                    text = $"{audioServiseData.Name}です。再起動してきました。";
+                    text = $"{audioServiseData.GuildSpeakerInfo.name}です。再起動してきました。";
                 }
 
                 try 
@@ -113,7 +116,7 @@ namespace voicevox_discord
         {
             AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
             audioServiseData.voiceChannel = null;
-            audioServiseData.m_IsSpeaking = false;
+            audioServiseData.IsSpeaking = false;
             await audioServiseData.audioclient!.StopAsync();
 
             await Task.CompletedTask;
@@ -131,6 +134,7 @@ namespace voicevox_discord
         {
             var target = GetOrCreateAudioServiceData(guildid);
             target.SetSpeaker(engineName, speakerName, styleName, id);
+            target.SaveSpeaker(guildid);
 
             Console.WriteLine(speakerName + " : " + id);
 
@@ -143,7 +147,7 @@ namespace voicevox_discord
             {
                 try 
                 {
-                    await PlayAudio(target, guildid, $"変わりまして{target.Name}です。{target.StyleName}な感じで行きますね。");
+                    await PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
                 }
                 catch (Exception ex)
                 {
@@ -158,6 +162,7 @@ namespace voicevox_discord
         /// <param name="command"></param>
         /// <param name="OPENAI_APIKEY"></param>
         /// <param name="text"></param>
+        /// <param type="role"></param>
         /// <returns></returns>
         public async Task Chat(SocketSlashCommand command, string text)
         {
@@ -219,17 +224,17 @@ namespace voicevox_discord
 
         private async Task PlayAudio(AudioServiceData audioServiseData, ulong guildid, string text)
         {
-            if (audioServiseData.m_IsSpeaking)
+            if (audioServiseData.IsSpeaking)
             {
                 return;
             }
-            audioServiseData.m_IsSpeaking = true;
+            audioServiseData.IsSpeaking = true;
 
             try
             {
                 string audiofile = $"{Directory.GetCurrentDirectory()}/audiofile/{guildid}.wav";
                 audioServiseData.VoicevoxEngineApi!.WriteInfo();
-                using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.Id, text))
+                using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.GuildSpeakerInfo.speakerId, text))
                 using (var wfr = new WaveFileReader(wavstream))
                 {
                     WaveFileWriter.CreateWaveFile(audiofile, wfr);
@@ -256,7 +261,7 @@ namespace voicevox_discord
                 Console.WriteLine(ex.ToString());
             }
 
-            audioServiseData.m_IsSpeaking = false;
+            audioServiseData.IsSpeaking = false;
         }
 
         private Process CreateStream(ulong guildid)

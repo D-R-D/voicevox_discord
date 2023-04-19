@@ -1,4 +1,6 @@
-﻿using System.Configuration;
+﻿using Newtonsoft.Json;
+using System.Configuration;
+using System.Text;
 using System.Xml.Linq;
 
 namespace voicevox_discord
@@ -7,12 +9,10 @@ namespace voicevox_discord
     internal class Settings
     {
         private const string XmlFileName = "voicevox_engine_list.xml";
-
+        private const string GuildSaveFile = "save/GuildSpeaker.json";
 
         private static Cache<Settings> CachedSettings = new Cache<Settings>(() => new Settings());
-        //機能の変数化？
         public static Settings Shared => CachedSettings.Value;
-
 
         public readonly string m_OpenAIKey;
         public readonly string m_GptModel; // chatgptのバージョン
@@ -24,12 +24,12 @@ namespace voicevox_discord
         public readonly string[] m_GuildIds;
         public readonly string[] m_AdminIds;
         public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary;
+        public Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
 
 
 #pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
         public Settings()
         {
-
             #region AppSettingsReaderからの設定読み込み
             var reader = new AppSettingsReader();
 
@@ -65,9 +65,15 @@ namespace voicevox_discord
             m_AdminIds = adminId!.Split(',');
             #endregion
 
-            #region XMLファイルからのエンジンリスト読み込み
+            m_EngineDictionary = GetServerXML();
+            m_GuildSaveObject = GetGuildSettings();
+        }
+#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
+        
+        private Dictionary<string, VoicevoxEngineApi> GetServerXML()
+        {
             var engineDictionary = new Dictionary<string, VoicevoxEngineApi>();
-            try 
+            try
             {
                 XElement engine_element = XElement.Load($"{Directory.GetCurrentDirectory()}/{XmlFileName}");
 
@@ -83,15 +89,65 @@ namespace voicevox_discord
 
                     Console.WriteLine(engine.Element("ipaddress")!.Value + " : " + int.Parse(engine.Element("port")!.Value));
                 }
-            } 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            return engineDictionary;
+        }
+
+        private Dictionary<ulong, GuildSaveObject> GetGuildSettings()
+        {
+            var guildSettingDictionary = new Dictionary<ulong, GuildSaveObject>();
+            try
+            {
+                string jsonstr = string.Empty;
+                using (StreamReader sr = new StreamReader($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}"))
+                {
+                    jsonstr = sr.ReadToEnd();
+                    sr.Close();
+                }
+
+                List<GuildSaveObject> guildSaveObjects = JsonConvert.DeserializeObject<List<GuildSaveObject>>(jsonstr)!;
+
+                foreach (var guildSaveObject in guildSaveObjects)
+                {
+                    guildSettingDictionary.Add(guildSaveObject.id, guildSaveObject);
+                }
+
+                m_GuildSaveObject = guildSettingDictionary;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            return guildSettingDictionary;
+        }
+
+        public void SaveSettings()
+        {
+            try
+            {
+                List<GuildSaveObject> guildSaveObjects = new ();
+                foreach (KeyValuePair<ulong, GuildSaveObject> saveObject in m_GuildSaveObject)
+                {
+                    guildSaveObjects.Add(saveObject.Value);
+                }
+
+                string savejson = JsonConvert.SerializeObject(guildSaveObjects, Formatting.Indented);
+                using (StreamWriter sw = new StreamWriter($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}", false, Encoding.UTF8))
+                {
+                    sw.Write(savejson);
+                    sw.Close();
+                }
+            }
             catch(Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }
-            m_EngineDictionary = engineDictionary;
-            #endregion
-
         }
-#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
     }
 }
