@@ -28,6 +28,8 @@ namespace voicevox_discord
         public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary;
         public readonly Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
 
+        public readonly Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
+
 
 #pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
         public Settings()
