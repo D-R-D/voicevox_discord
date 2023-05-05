@@ -74,6 +74,7 @@ namespace voicevox_discord
                 if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
                 {
                     await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
+                    return;
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
                 await LeaveAsync(guildid);
@@ -134,20 +135,21 @@ namespace voicevox_discord
         {
             var target = GetOrCreateAudioServiceData(guildid);
             target.SetSpeaker(engineName, speakerName, styleName, id);
-            target.SaveSpeaker(guildid);
 
-            Console.WriteLine(speakerName + " : " + id);
-
-            if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
+            Task.Run(() => // PlayAudioを待ちたい
             {
-                return;
-            }
+                if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
+                {
+                    Console.WriteLine("client null");
+                    target.SaveSpeaker(guildid);
 
-            _ = Task.Run(async () =>
-            {
+                    return;
+                }
+
                 try 
                 {
-                    await PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
+                    _ = PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
+                    target.SaveSpeaker(guildid);
                 }
                 catch (Exception ex)
                 {

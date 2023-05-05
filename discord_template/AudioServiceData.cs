@@ -37,10 +37,10 @@ namespace voicevox_discord
         /*-------------------------------------*/
 
         /*---------------AudioChannel---------------*/
-        public ulong? guildId { get; private set; } = null;
-        public IVoiceChannel? voiceChannel { get; set; } = null;
-        public IAudioClient? audioclient { get; set; } = null;
-        public AudioOutStream? audiooutstream { get; set; } = null;
+        public ulong? guildId { get; private set; }
+        public IVoiceChannel? voiceChannel { get; set; }
+        public IAudioClient? audioclient { get; set; }
+        public AudioOutStream? audiooutstream { get; set; }
         /*------------------------------------------*/
 
 
@@ -52,7 +52,7 @@ namespace voicevox_discord
             GuildSpeakerInfo.speakerId = id;
 
             VoicevoxEngineApi = Settings.Shared.m_EngineDictionary[GuildSpeakerInfo.engineName];
-            SetInitialMessage();
+            ChatGpt.SetInitialMessage(GuildSpeakerInfo.name, GuildSpeakerInfo.style);
         }
         public void SetSavedSpeaker(ulong guildid)
         {
@@ -84,12 +84,7 @@ namespace voicevox_discord
             {
                 Settings.Shared.m_GuildSaveObject.Add((ulong)guildId!, guildSaveObject);
             }
-            Settings.Shared.SaveSettings();
-        }
-
-        private void SetInitialMessage()
-        {
-            ChatGpt.SetInitialMessage(GuildSpeakerInfo.name, GuildSpeakerInfo.style);
+            Settings.Shared.SaveGuildSettings();
         }
     }
 }
