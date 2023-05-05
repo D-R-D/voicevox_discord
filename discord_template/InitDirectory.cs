@@ -12,6 +12,9 @@ namespace voicevox_discord
         {
             checkdir("commands");
             checkdir("audiofile");
+            checkdir("save");
+
+            checkfile("save/GuildSpeaker.json");
         }
 
         private void checkdir(string dirname)

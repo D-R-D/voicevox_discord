@@ -74,6 +74,7 @@ namespace voicevox_discord
                 if (audioServiceData.audioclient == null || audioServiceData.audioclient!.ConnectionState != ConnectionState.Connected)
                 {
                     await command.ModifyOriginalResponseAsync(m => { m.Content = "どこにも参加してないよ"; });
+                    return;
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
                 await LeaveAsync(guildid);
@@ -132,22 +133,23 @@ namespace voicevox_discord
         /// <param name="id"></param>
         public void SetSpeaker(ulong guildid, string speakerName, string styleName, int id, string engineName)
         {
-            var target = GetOrCreateAudioServiceData(guildid);
-            target.SetSpeaker(engineName, speakerName, styleName, id);
-            target.SaveSpeaker(guildid);
-
-            Console.WriteLine(speakerName + " : " + id);
-
-            if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
+            Task.Run(() =>
             {
-                return;
-            }
+                var target = GetOrCreateAudioServiceData(guildid);
+                target.SetSpeaker(engineName, speakerName, styleName, id);
 
-            _ = Task.Run(async () =>
-            {
+                if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
+                {
+                    Console.WriteLine("client null");
+                    target.SaveSpeaker(guildid);
+
+                    return;
+                }
+
                 try 
                 {
-                    await PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
+                    _ = PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
+                    target.SaveSpeaker(guildid);
                 }
                 catch (Exception ex)
                 {

@@ -10,21 +10,23 @@ namespace voicevox_discord
     {
         private const string XmlFileName = "voicevox_engine_list.xml";
         private const string GuildSaveFile = "save/GuildSpeaker.json";
+        private readonly object LockObject = new object();
 
         private static Cache<Settings> CachedSettings = new Cache<Settings>(() => new Settings());
         public static Settings Shared => CachedSettings.Value;
 
         public readonly string m_OpenAIKey;
-        public readonly string m_GptModel; // chatgptのバージョン
-        public readonly string m_GptInitialMessage;// chatgptの初期化メッセージ
+        public readonly string m_GptModel;          // chatgptのバージョン
+        public readonly string m_GptInitialMessage; // chatgptの初期化メッセージ
 
         public readonly string m_Token;
         public readonly string m_DiscordAPIVersion;
         public readonly string m_ApplicationId;
         public readonly string[] m_GuildIds;
         public readonly string[] m_AdminIds;
+
         public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary;
-        public Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
+        public readonly Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
 
 
 #pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
@@ -103,7 +105,7 @@ namespace voicevox_discord
             var guildSettingDictionary = new Dictionary<ulong, GuildSaveObject>();
             try
             {
-                string jsonstr = string.Empty;
+                string jsonstr;
                 using (StreamReader sr = new StreamReader($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}"))
                 {
                     jsonstr = sr.ReadToEnd();
@@ -116,8 +118,6 @@ namespace voicevox_discord
                 {
                     guildSettingDictionary.Add(guildSaveObject.id, guildSaveObject);
                 }
-
-                m_GuildSaveObject = guildSettingDictionary;
             }
             catch (Exception ex)
             {
@@ -127,26 +127,43 @@ namespace voicevox_discord
             return guildSettingDictionary;
         }
 
-        public void SaveSettings()
+        public void SaveGuildSettings()
         {
+            while (m_GuildSaveObject == null)
+            {
+                Task.Yield();
+            }
+
+            if (!Monitor.TryEnter(LockObject))
+            {
+                return; // 他のスレッドが制御を持っていたら何もせず離れる
+            }
+
             try
             {
-                List<GuildSaveObject> guildSaveObjects = new ();
-                foreach (KeyValuePair<ulong, GuildSaveObject> saveObject in m_GuildSaveObject)
-                {
-                    guildSaveObjects.Add(saveObject.Value);
-                }
+                List<GuildSaveObject> guildSaveObjects;
+                Dictionary<ulong, GuildSaveObject> temp_GuildData;
 
-                string savejson = JsonConvert.SerializeObject(guildSaveObjects, Formatting.Indented);
-                using (StreamWriter sw = new StreamWriter($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}", false, Encoding.UTF8))
+                do
                 {
-                    sw.Write(savejson);
-                    sw.Close();
-                }
+                    temp_GuildData = new(m_GuildSaveObject);
+                    guildSaveObjects = new(temp_GuildData.Values);
+                    string savejson = JsonConvert.SerializeObject(guildSaveObjects, Formatting.Indented);
+
+                    using (StreamWriter sw = new StreamWriter($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}", false, Encoding.UTF8))
+                    {
+                        sw.Write(savejson);
+                    }
+
+                } while (temp_GuildData != m_GuildSaveObject);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                Monitor.Exit(LockObject);
             }
         }
     }

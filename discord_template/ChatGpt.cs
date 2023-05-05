@@ -57,12 +57,12 @@ namespace voicevox_discord
                 Client = new HttpClient();
             }
 
-            //ヘッダを作成する
+            // ヘッダを作成する
             HttpRequestMessage request = GetHeader();
-            //HttpRequestMessageのコンテンツを設定する
+            // HttpRequestMessageのコンテンツを設定する
             HttpRequestMessage sendRequest = RequestContentBuilder(request, BuildMessage_json(message));
 
-            //送信する
+            // 送信する
             HttpResponseMessage response = await Client.SendAsync(sendRequest);
 
             string jsonResponse = await response.Content.ReadAsStringAsync();
@@ -74,19 +74,26 @@ namespace voicevox_discord
 
         private string BuildMessage_json(string message)
         {
-            List<Dictionary<string, string>> messages = new List<Dictionary<string, string>>();
-            Dictionary<string, string> system_content = new Dictionary<string, string>();
-            system_content.Add("role", "system");
-            system_content.Add("content", InitMessage);
+            List<Dictionary<string, string>> messages = new();
+            Dictionary<string, string> system_content = new()
+            {
+                { "role", "system" },
+                { "content", InitMessage }
+            };
             messages.Add(system_content);
-            Dictionary<string, string> user_content = new Dictionary<string, string>();
-            user_content.Add("role", "user");
-            user_content.Add("content", message);
+
+            Dictionary<string, string> user_content = new()
+            {
+                { "role", "user" },
+                { "content", message }
+            };
             messages.Add(user_content);
 
-            Dictionary<string, object> body = new Dictionary<string, object>();
-            body.Add("model", Settings.Shared.m_GptModel);
-            body.Add("messages", messages);
+            Dictionary<string, object> body = new()
+            {
+                { "model", Settings.Shared.m_GptModel },
+                { "messages", messages }
+            };
 
             return JsonConvert.SerializeObject(body);
         }

@@ -79,8 +79,8 @@ namespace voicevox_discord
                         await command.RespondAsync("ごめんね、guild専用なんだ");
                         return;
                     }
-                    ulong guildid = command.GuildId.Value;
 
+                    ulong guildid = command.GuildId.Value;
                     SelectMenuBuilder? menuBuilder = null;
                     ComponentBuilder? builder = null;
                     string commandname = command.Data.Name;
@@ -91,8 +91,6 @@ namespace voicevox_discord
                     {
                         await command.DeferAsync();
                         string firstval = command.Data.Options.First().Value.ToString()!;
-
-                        //join
                         await s_AudioService!.JoinOperation(command, firstval);
 
                         return;
@@ -173,10 +171,9 @@ namespace voicevox_discord
                 {
                     ComponentController selectMenuController = new ComponentController(arg);
 
+                    Console.WriteLine($"[{arg.Data.CustomId}] : [{arg.Data.Values.First()}]");
                     string[] CustomID = arg.Data.CustomId.Split(':');          // コマンド名[.機能名] : [エンジン名] : [話者名] : コマンドモード
                     string[] CustomValue = arg.Data.Values.First().Split('@'); // 内部コマンド名 @ コマンド値
-
-                    Console.WriteLine($"[{arg.Data.CustomId}] : [{arg.Data.Values.First()}]");
 
                     string commandName = CustomID.First();
                     string InnerCommandName = CustomValue.First();
@@ -201,6 +198,7 @@ namespace voicevox_discord
                         catch (Exception ex)
                         {
                             Console.WriteLine(ex.Message);
+
                             await arg.RespondAsync($"[{InnerCommandValue}]:エラーが発生したから話者リストを再読み込みたけど失敗しちゃった…\n{ex.Message}");
                             return;
                         }
@@ -233,13 +231,11 @@ namespace voicevox_discord
                             dynamic jsonobj = JsonConvert.DeserializeObject(response)!;
                             response = JsonConvert.SerializeObject(jsonobj, Formatting.Indented);
 
-                            //Optional<IEnumerable<FileAttachment>> optional = new();
                             using (Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(response)))
                             {
                                 //ファイル添付に必用な処理
                                 FileAttachment fa = new FileAttachment(stream, DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
                                 List<FileAttachment> flis = new List<FileAttachment>() { fa };
-                                //optional = new Optional<IEnumerable<FileAttachment>>(flis);
 
                                 await arg.RespondWithFilesAsync(flis,"ユーザ辞書、若しくはエラーメッセージ");
                             }
@@ -284,6 +280,7 @@ namespace voicevox_discord
                         catch (Exception ex)
                         {
                             Console.WriteLine(ex.ToString());
+
                             await arg.RespondAsync(ex.Message);
                             return;
                         }
@@ -333,9 +330,9 @@ namespace voicevox_discord
                         var speakerValues = components[0].CustomId.Split("@");
                         var speakerName = speakerValues[0];
                         var styleName = speakerValues[1];
-
                         var speakerId = await voicevoxEngineApi.GetSpeakerId(speakerName, styleName);
                         string text = components.First().Value;
+
                         //VoicevoxEngineからWavファイルをもらう
                         Stream stream = await voicevoxEngineApi!.GetWavFromApi(speakerId, text);
 
