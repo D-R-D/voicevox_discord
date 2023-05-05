@@ -63,7 +63,6 @@ namespace voicevox_discord
                 guildSaveObject = Settings.Shared.m_GuildSaveObject[guildid];
                 guildSpeaker = guildSaveObject.guildSpeaker;
             }
-
             guildId = guildid;
 
             SetSpeaker(guildSpeaker.engineName, guildSpeaker.name, guildSpeaker.style, guildSpeaker.speakerId);
