@@ -154,7 +154,7 @@ namespace voicevox_discord
                         sw.Write(savejson);
                     }
 
-                } while (temp_GuildData != m_GuildSaveObject);
+                } while ( (temp_GuildData.Count != m_GuildSaveObject.Count) || temp_GuildData.All(kvp => !m_GuildSaveObject.TryGetValue(kvp.Key, out var value) || value != kvp.Value) );
             }
             catch (Exception ex)
             {
