@@ -5,7 +5,7 @@
         public ulong id { get; set; }
         public GuildSpeaker guildSpeaker { get; set; }
 
-        internal GuildSaveObject()
+        public GuildSaveObject()
         {
             guildSpeaker = new GuildSpeaker();
         }
@@ -18,7 +18,7 @@
         public string style { get; set; }
         public int speakerId { get; set; }
 
-        internal GuildSpeaker()
+        public GuildSpeaker()
         {
             engineName = "voicevox";
             name = "四国めたん";

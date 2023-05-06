@@ -2,7 +2,7 @@
 
 namespace voicevox_discord
 {
-    internal class SelectMenuEditor
+    public class SelectMenuEditor
     {
         /// <summary>
         /// エンジン一覧

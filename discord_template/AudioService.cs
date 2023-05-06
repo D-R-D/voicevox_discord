@@ -60,8 +60,8 @@ namespace voicevox_discord
                 catch (Exception ex) 
                 {
                     Console.WriteLine(ex.ToString());
-                    await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
 
+                    await command.ModifyOriginalResponseAsync(m => { m.Content = ex.Message; });
                     return;
                 }
 
@@ -78,7 +78,6 @@ namespace voicevox_discord
                 }
                 await command.ModifyOriginalResponseAsync(m => { m.Content = "退出します"; });
                 await LeaveAsync(guildid);
-
                 return;
             }
         }
@@ -250,6 +249,10 @@ namespace voicevox_discord
                         await audioServiseData.audioclient!.SetSpeakingAsync(true);
                         await output.CopyToAsync(audioServiseData.audiooutstream!);
                     }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                     finally
                     {
                         await audioServiseData.audiooutstream!.FlushAsync();
@@ -258,7 +261,7 @@ namespace voicevox_discord
                 }
                 process.Kill();
             }
-            catch(Exception ex) 
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }

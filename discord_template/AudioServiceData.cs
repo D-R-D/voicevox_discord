@@ -3,7 +3,7 @@ using Discord.Audio;
 
 namespace voicevox_discord
 {
-    internal class AudioServiceData
+    public class AudioServiceData
     {
         public AudioServiceData()
         {

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace voicevox_discord
+﻿namespace voicevox_discord
 {
     internal class InitDirectory
     {
@@ -29,7 +23,7 @@ namespace voicevox_discord
         {
             if (!File.Exists($"{Directory.GetCurrentDirectory()}/{filename}"))
             {
-                File.Create($"{Directory.GetCurrentDirectory()}/{filename}");
+                File.Create($"{Directory.GetCurrentDirectory()}/{filename}").Close();
             }
         }
     }

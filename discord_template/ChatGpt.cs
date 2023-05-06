@@ -33,7 +33,7 @@ namespace voicevox_discord
         public int index { get; set; }
     }
 
-    internal class ChatGpt
+    public class ChatGpt
     {
         private string OPENAI_APIKEY = string.Empty;
         private string InitMessage = string.Empty;

@@ -2,7 +2,7 @@
 
 namespace voicevox_discord
 {
-    internal class CommandSender
+    public class CommandSender
     {
 
         /// <summary>

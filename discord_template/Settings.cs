@@ -6,7 +6,7 @@ using System.Xml.Linq;
 namespace voicevox_discord
 {
 
-    internal class Settings
+    public class Settings
     {
         private const string XmlFileName = "voicevox_engine_list.xml";
         private const string GuildSaveFile = "save/GuildSpeaker.json";

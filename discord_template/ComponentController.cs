@@ -3,7 +3,7 @@ using Discord.WebSocket;
 
 namespace voicevox_discord
 {
-    internal class ComponentController
+    public class ComponentController
     {
         private SocketMessageComponent _component;
 
