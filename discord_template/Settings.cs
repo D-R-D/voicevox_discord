@@ -28,7 +28,6 @@ namespace voicevox_discord
         public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary;
         public readonly Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
 
-#pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
         public Settings()
         {
             #region AppSettingsReaderからの設定読み込み
@@ -69,7 +68,6 @@ namespace voicevox_discord
             m_EngineDictionary = GetServerXML();
             m_GuildSaveObject = GetGuildSettings();
         }
-#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
         
         private Dictionary<string, VoicevoxEngineApi> GetServerXML()
         {
@@ -104,10 +102,10 @@ namespace voicevox_discord
             var guildSettingDictionary = new Dictionary<ulong, GuildSaveObject>();
             try
             {
-                string jsonstr;
+                string jsonstr = string.Empty;
                 using (StreamReader sr = new StreamReader($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}"))
                 {
-                    jsonstr = sr.ReadToEnd();
+                    jsonstr += sr.ReadToEnd();
                     sr.Close();
                 }
 

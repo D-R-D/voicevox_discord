@@ -3,6 +3,7 @@ using Discord.Audio;
 using Discord.WebSocket;
 using NAudio.Wave;
 using System.Diagnostics;
+using System.Text;
 
 namespace voicevox_discord
 {
@@ -173,9 +174,31 @@ namespace voicevox_discord
             try 
             {
                 string response = await audioServiceData.ChatGpt.RequestSender(text);
-                await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
+                if (response.Length > 2000)
+                {
+                    Optional<IEnumerable<FileAttachment>> optional = new();
+                    using (Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(response)))
+                    {
+                        //ファイル添付に必用な処理
+                        FileAttachment fa = new FileAttachment(stream, DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".txt");
+                        List<FileAttachment> flis = new List<FileAttachment> { fa };
+                        optional = new Optional<IEnumerable<FileAttachment>>(flis);
 
-                if (audioServiceData.audioclient != null)
+                        response = $"文字数上限に達しました。脱法処理で表示します。\n[文字数: {response.Length}]";
+
+                        await command.ModifyOriginalResponseAsync(m =>
+                        {
+                            m.Content = response;
+                            m.Attachments = optional;
+                        });
+                    }
+                }
+                else
+                {
+                    await command.ModifyOriginalResponseAsync(m => { m.Content = $"{response}"; });
+                }
+
+                    if (audioServiceData.audioclient != null)
                 if (audioServiceData.audioclient!.ConnectionState == ConnectionState.Connected)
                 { 
                     await PlayAudio(audioServiceData, guildid, response);
@@ -230,6 +253,8 @@ namespace voicevox_discord
                 return;
             }
             audioServiseData.IsSpeaking = true;
+
+            text = text.Replace("#", "シャープ");
 
             try
             {

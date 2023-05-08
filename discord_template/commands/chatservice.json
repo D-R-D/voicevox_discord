@@ -7,7 +7,7 @@
       "description": "control command",
       "type": 3,
       "required": true,
-      "max_length": 200
+      "max_length": 1000
     }
   ]
 }
