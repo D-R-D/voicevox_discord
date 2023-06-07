@@ -1,9 +1,10 @@
 ﻿using Newtonsoft.Json;
 using System.Text;
+using voicevox_discord.engineController;
 
 namespace voicevox_discord
 {
-    public class VoicevoxEngineApi
+    public class VoicevoxEngineApi : SynthesisEngine
     {
         private readonly string m_EngineIPAddress;
         private readonly int m_EnginePort;
@@ -23,7 +24,9 @@ namespace voicevox_discord
             m_EngineName = name;
         }
 
-        public static VoicevoxEngineApi Create(string ipAddress, int port, string name)
+        //
+        // インスタンスを生成して返す
+        public override VoicevoxEngineApi Create(string ipAddress, int port, string name)
         {
             var instance = new VoicevoxEngineApi(ipAddress, port, name);
             for (int i = 0; i < 10; i++)
@@ -41,47 +44,19 @@ namespace voicevox_discord
             return instance;
         }
 
-        public void WriteInfo()
-        {
-            Console.WriteLine($"[{m_EngineName}.Info]@{m_EngineIPAddress}:{m_EnginePort}");
-        }
-
-        public async void LoadSpeakers()
+        //
+        //
+        public override async void LoadSpeakers()
         {
             string json = await GetFromApi($@"http://{m_EngineIPAddress}:{m_EnginePort}/speakers");
             m_Speakers = JsonConvert.DeserializeObject<IList<Speaker>>(json)!;
         }
 
         //
-        // ユーザー辞書登録を行う
-        public async Task<bool> SetUserDictionary(string surface, string pronunciation)
-        {
-            HttpClient client = new HttpClient();
-            StringContent content = new StringContent("", Encoding.UTF8, @"application/json");
-            var res = await client.PostAsync(@$"http://{m_EngineIPAddress}:{m_EnginePort}/user_dict_word?surface={surface}&pronunciation={pronunciation}&accent_type=1", content);
-
-            if (!res.IsSuccessStatusCode)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
         //
-        //ユーザー辞書を取得する
-        public async Task<string> GetUserDictionary()
+        public override void WriteInfo()
         {
-            try
-            {
-                string result = await GetFromApi($"http://{m_EngineIPAddress}:{m_EnginePort}/user_dict");
-                
-                return result;
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
+            Console.WriteLine($"[{m_EngineName}.Info]@{m_EngineIPAddress}:{m_EnginePort}");
         }
 
         //
@@ -93,7 +68,7 @@ namespace voicevox_discord
 
             if(!result.IsSuccessStatusCode)
             {
-                return "サーバーへ正常に接続できませんでした。";
+                throw new Exception($"[{m_EngineName}]:サーバーに接続できませんでした。");
             }
 
             return await result.Content.ReadAsStringAsync();
@@ -101,7 +76,7 @@ namespace voicevox_discord
 
         //
         //Wavファイルを取得してStreamで返す
-        public async Task<Stream> GetWavFromApi(int id, string text)
+        public override async Task<Stream> GetWavFromApi(string uuid, int id, string text)
         {
             HttpClient client = new HttpClient();
             StringContent content = new StringContent("", Encoding.UTF8, @"application/json");
@@ -120,34 +95,23 @@ namespace voicevox_discord
             return await res.Content.ReadAsStreamAsync();
         }
 
-        public async Task<int> GetSpeakerId(string name, string style)
-        {
-            var speakers = await GetSpeakers();
-            var id = speakers.Where(_ => _.name == name).FirstOrDefault()?.styles.Where(_ => _.name == style).FirstOrDefault()?.id;
-            if (id == null) 
-            {
-                throw new Exception($"speakerIDが存在しません。");
-            }
-            return id!.Value;
-        }
-
-        public async Task<Speaker[]> GetSpeakers()
+        public override async Task<List<string>> GetSpeakers()
         {
             while (m_Speakers == null)
             {
                 await Task.Yield();
             }
-            return m_Speakers.ToArray();
+            return m_Speakers.Select(_ => _.name).ToList();
         }
-        public async Task<Speaker[]> GetSpeakers(int page)
+        public override async Task<List<string>> GetPagedSpeakers(int page)
         {
             while (m_Speakers == null)
             {
                 await Task.Yield();
             }
-            return m_Speakers.ToArray().Skip(16 * page).Take(16).ToArray();
+            return m_Speakers.Select(_ => _.name).ToArray().Skip(16 * page).Take(16).ToList();
         }
-        public async Task<bool> SpeakerPageExist(int page)
+        public override async Task<bool> SpeakerPageExist(int page)
         {
             if (page < 0)
             {
@@ -159,16 +123,34 @@ namespace voicevox_discord
             }
             return m_Speakers.ToArray().Length > page * 16;
         }
-
-        public async Task<Style[]> GetStyles(string speakername, int page)
+        public override async Task<string> GetSpeakerUUID(string speakername)
         {
             while (m_Speakers == null)
             {
                 await Task.Yield();
             }
-            return m_Speakers.Where(_ => _.name == speakername).First().styles.ToArray().Skip(16 * page).Take(16).ToArray();
+
+            return m_Speakers.Where(_ => _.name == speakername).First().speaker_uuid;
         }
-        public async Task<bool> StylePageExist(string speakername, int page)
+
+        public override async Task<List<string>> GetStyles(string speakername)
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return m_Speakers.Where(_ => _.name == speakername).First().styles.Select(_ => _.name).ToList();
+        }
+        public override async Task<List<string>> GetPagedStyles(string speakername, int page)
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            return m_Speakers.Where(_ => _.name == speakername).First().styles.Select(_ => _.name).ToArray().Skip(16 * page).Take(16).ToList();
+        }
+        public override async Task<bool> StylePageExist(string speakername, int page)
         {
             if (page < 0)
             {
@@ -180,20 +162,20 @@ namespace voicevox_discord
             }
             return m_Speakers.Where(_ => _.name == speakername).FirstOrDefault()!.styles.ToArray().Length > page * 16;
         }
+        public override async Task<int> GetStyleId(string name, string style)
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+            var id = m_Speakers.Where(_ => _.name == name).FirstOrDefault()?.styles.Where(_ => _.name == style).FirstOrDefault()?.id;
+            if (id == null)
+            {
+                throw new Exception($"speakerIDが存在しません。");
+            }
+            return id.Value;
+        }
     }
-
-#pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
-    public class Speaker
-    {
-        public string name { get; set; }
-        public string speaker_uuid { get; set; }
-        public IList<Style> styles { get; set; }
-        public string version { get; set; }
-    }
-    public class Style
-    {
-        public string name { get; set; }
-        public int id { get; set; }
-    }
-#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
 }
+
+

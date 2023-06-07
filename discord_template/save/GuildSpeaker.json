@@ -3,7 +3,9 @@
     "id": 462159205911232528,
     "GuildSpeaker": {
       "engineName": "voicevox",
+      "engineType": "voicevox",
       "name": "四国めたん",
+      "uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff",
       "style": "ノーマル",
       "speakerId": 2
     }

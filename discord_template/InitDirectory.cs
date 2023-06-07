@@ -8,7 +8,10 @@
             checkdir("audiofile");
             checkdir("save");
 
-            checkfile("save/GuildSpeaker.json");
+            checkdir("save/setting");
+            checkdir("save/dictionary");
+
+            checkfile("save/setting/GuildSpeaker.json");
         }
 
         private void checkdir(string dirname)

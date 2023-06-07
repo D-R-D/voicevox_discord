@@ -4,6 +4,8 @@ using Discord.WebSocket;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Text;
+using System.Linq;
+using NAudio.CoreAudioApi;
 
 namespace voicevox_discord
 {
@@ -15,8 +17,8 @@ namespace voicevox_discord
         {
             if (!GuildAudioServiceDict.ContainsKey(guildid)) 
             {
-                GuildAudioServiceDict.Add(guildid, new AudioServiceData());
-                GuildAudioServiceDict[guildid].SetSavedSpeaker(guildid);
+                GuildAudioServiceDict.Add(guildid, AudioServiceData.Create(guildid));
+                GuildAudioServiceDict[guildid].SetSavedSpeaker();
             }
             
             return GuildAudioServiceDict[guildid];
@@ -91,11 +93,11 @@ namespace voicevox_discord
 
             _ = Task.Run(async () =>
             {
-                string text = $"{audioServiseData.GuildSpeakerInfo.name}です。{audioServiseData.GuildSpeakerInfo.style}な感じで行きますね。";
+                string text = $"{audioServiseData.GuildSave.guildSpeaker.name}です。{audioServiseData.GuildSave.guildSpeaker.style}な感じで行きますね。";
 
                 if (rejoin)
                 {
-                    text = $"{audioServiseData.GuildSpeakerInfo.name}です。再起動してきました。";
+                    text = $"{audioServiseData.GuildSave.guildSpeaker.name}です。再起動してきました。";
                 }
 
                 try 
@@ -131,25 +133,25 @@ namespace voicevox_discord
         /// <param name="speakerName"></param>
         /// <param name="styleName"></param>
         /// <param name="id"></param>
-        public void SetSpeaker(ulong guildid, string speakerName, string styleName, int id, string engineName)
+        public void SetSpeaker(ulong guildid, string speakerName, string uuid,string styleName, int id, string engineName)
         {
             Task.Run(() =>
             {
                 var target = GetOrCreateAudioServiceData(guildid);
-                target.SetSpeaker(engineName, speakerName, styleName, id);
+                target.SetSpeaker(engineName, speakerName, uuid,styleName, id);
 
                 if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
                 {
                     Console.WriteLine("client null");
-                    target.SaveSpeaker(guildid);
+                    target.SaveSpeaker();
 
                     return;
                 }
 
                 try 
                 {
-                    _ = PlayAudio(target, guildid, $"変わりまして{target.GuildSpeakerInfo.name}です。{target.GuildSpeakerInfo.style}な感じで行きますね。");
-                    target.SaveSpeaker(guildid);
+                    _ = PlayAudio(target, guildid, $"変わりまして{target.GuildSave.guildSpeaker.name}です。{target.GuildSave.guildSpeaker.style}な感じで行きますね。");
+                    target.SaveSpeaker();
                 }
                 catch (Exception ex)
                 {
@@ -254,13 +256,16 @@ namespace voicevox_discord
             }
             audioServiseData.IsSpeaking = true;
 
-            text = text.Replace("#", "シャープ");
+            foreach (var dict in Settings.Shared.m_GuildDictionary[guildid])
+            {
+                text = text.Replace(dict.Key, dict.Value);
+            }
 
             try
             {
                 string audiofile = $"{Directory.GetCurrentDirectory()}/audiofile/{guildid}.wav";
-                audioServiseData.VoicevoxEngineApi!.WriteInfo();
-                using (Stream wavstream = await audioServiseData.VoicevoxEngineApi!.GetWavFromApi(audioServiseData.GuildSpeakerInfo.speakerId, text))
+                audioServiseData.EngineApi.WriteInfo();
+                using (Stream wavstream = await audioServiseData.EngineApi!.GetWavFromApi(audioServiseData.GuildSave.guildSpeaker.uuid, audioServiseData.GuildSave.guildSpeaker.speakerId, text))
                 using (var wfr = new WaveFileReader(wavstream))
                 {
                     WaveFileWriter.CreateWaveFile(audiofile, wfr);

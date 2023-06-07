@@ -35,14 +35,15 @@ namespace voicevox_discord
 
     public class ChatGpt
     {
-        private string OPENAI_APIKEY = string.Empty;
-        private string InitMessage = string.Empty;
-        private HttpClient? Client = null;
+        private string OPENAI_APIKEY;
+        private string InitMessage;
+        private HttpClient Client;
 
         public ChatGpt(string _OPENAI_APIKEY)
         {
             OPENAI_APIKEY = _OPENAI_APIKEY;
             InitMessage = "これからの会話に適切な返答をしなさい。";
+            Client = new HttpClient();
         }
 
         public void SetInitialMessage(string Name, string styleName)
@@ -52,11 +53,6 @@ namespace voicevox_discord
 
         public async Task<string> RequestSender(string message)
         {
-            if(Client == null)
-            {
-                Client = new HttpClient();
-            }
-
             // ヘッダを作成する
             HttpRequestMessage request = GetHeader();
             // HttpRequestMessageのコンテンツを設定する

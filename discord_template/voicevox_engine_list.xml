@@ -2,12 +2,14 @@
 <enginelist>
 	<engine>
 		<name>voicevox</name>
+		<type>voicevox</type>
 		<ipaddress>192.168.11.188</ipaddress>
 		<port>50021</port>
 	</engine>
 
 	<engine>
 		<name>coeiroink</name>
+		<type>coeiroink</type>
 		<ipaddress>192.168.11.188</ipaddress>
 		<port>50031</port>
 	</engine>

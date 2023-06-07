@@ -19,7 +19,7 @@ namespace voicevox_discord
         {
             SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧 p.{page}").WithCustomId($"engine:{CommandMode}").WithMinValues(1).WithMaxValues(1);
             
-            var engines = Settings.Shared.m_EngineDictionary.Keys.Skip(16 * page).Take(16).ToArray();
+            var engines = Settings.Shared.m_EngineList.Keys.Skip(16 * page).Take(16).ToArray();
             if (page > 0)
             {
                 builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
@@ -29,7 +29,7 @@ namespace voicevox_discord
             {
                 try
                 {
-                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"{(await Settings.Shared.m_EngineDictionary[engineName].GetSpeakers()).Count()} params found.");
+                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"{(await Settings.Shared.m_EngineList[engineName].Engine.GetSpeakers()).Count()} params found.");
                 }
                 catch (Exception ex)
                 {
@@ -37,7 +37,7 @@ namespace voicevox_discord
                 }
             }
 
-            if (Settings.Shared.m_EngineDictionary.Keys.ToArray().Count() > (16 * (page + 1)))
+            if (Settings.Shared.m_EngineList.Keys.ToArray().Count() > (16 * (page + 1)))
             {
                 builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
             }
@@ -67,20 +67,22 @@ namespace voicevox_discord
                 builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
             }
 
-            var speakers = await Settings.Shared.m_EngineDictionary[engineName].GetSpeakers(page);
+            var speakers = await Settings.Shared.m_EngineList[engineName].Engine.GetPagedSpeakers(page);
 
             foreach (var speaker in speakers)
             {
                 try
                 {
-                    builder.AddOption(speaker.name, $"speaker@{speaker.name}", $"{speaker.styles.Count} params found.");
+                    var uuid = await Settings.Shared.m_EngineList[engineName].Engine.GetSpeakerUUID(speaker);
+                    var styles = await Settings.Shared.m_EngineList[engineName].Engine.GetStyles(speaker);
+                    builder.AddOption(speaker, $"speaker@{speaker}*{uuid}", $"{styles.Count} params found.");
                 }
                 catch (Exception ex) 
                 {
                     Console.WriteLine(ex.Message);
                 }
             }
-            if (await Settings.Shared.m_EngineDictionary[engineName].SpeakerPageExist(page + 1))
+            if (await Settings.Shared.m_EngineList[engineName].Engine.SpeakerPageExist(page + 1))
             {
                 builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
             }
@@ -110,13 +112,13 @@ namespace voicevox_discord
                 builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
             }
 
-            var styles = await Settings.Shared.m_EngineDictionary[engineName].GetStyles(speakerName, page);
+            var styles = await Settings.Shared.m_EngineList[engineName].Engine.GetPagedStyles(speakerName, page);
 
             foreach (var style in styles) 
             {
                 try
                 {
-                    builder.AddOption(style.name, $"id@{style.name}", $"selected speaker : {speakerName}");
+                    builder.AddOption(style, $"id@{style}", $"selected speaker : {speakerName}");
                 }
                 catch (Exception ex)
                 {
@@ -124,7 +126,7 @@ namespace voicevox_discord
                 }
             }
 
-            if (await Settings.Shared.m_EngineDictionary[engineName].StylePageExist(speakerName, page + 1))
+            if (await Settings.Shared.m_EngineList[engineName].Engine.StylePageExist(speakerName, page + 1))
             {
                 builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
             }

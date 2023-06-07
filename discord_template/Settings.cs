@@ -1,7 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using Discord.Rest;
+using Newtonsoft.Json;
 using System.Configuration;
+using System.Net.Sockets;
+using System.Security.Policy;
 using System.Text;
 using System.Xml.Linq;
+using voicevox_discord.engineController;
+using voicevox_discord.engines;
 
 namespace voicevox_discord
 {
@@ -9,8 +14,10 @@ namespace voicevox_discord
     public class Settings
     {
         private const string XmlFileName = "voicevox_engine_list.xml";
-        private const string GuildSaveFile = "save/GuildSpeaker.json";
-        private readonly object LockObject = new object();
+        private const string GuildSaveFile = "save/setting/GuildSpeaker.json";
+        private const string GuildDictDir = "save/dictionary";
+        private readonly object LockSet = new object();
+        private readonly object LockDir = new object();
 
         private static Cache<Settings> CachedSettings = new Cache<Settings>(() => new Settings());
         public static Settings Shared => CachedSettings.Value;
@@ -25,8 +32,10 @@ namespace voicevox_discord
         public readonly string[] m_GuildIds;
         public readonly string[] m_AdminIds;
 
-        public readonly IReadOnlyDictionary<string, VoicevoxEngineApi> m_EngineDictionary;
+        // (エンジン名, エンジン)
+        public readonly IReadOnlyDictionary<string, EngineController> m_EngineList;
         public readonly Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
+        public readonly Dictionary<ulong, Dictionary<string, string>> m_GuildDictionary;
 
         public Settings()
         {
@@ -65,13 +74,14 @@ namespace voicevox_discord
             m_AdminIds = adminId!.Split(',');
             #endregion
 
-            m_EngineDictionary = GetServerXML();
+            m_EngineList = GetServerXML();
             m_GuildSaveObject = GetGuildSettings();
+            m_GuildDictionary = GetGuildDictionary();
         }
         
-        private Dictionary<string, VoicevoxEngineApi> GetServerXML()
+        private Dictionary<string, EngineController> GetServerXML()
         {
-            var engineDictionary = new Dictionary<string, VoicevoxEngineApi>();
+            var engineDictionary = new Dictionary<string, EngineController>();
             try
             {
                 XElement engine_element = XElement.Load($"{Directory.GetCurrentDirectory()}/{XmlFileName}");
@@ -79,11 +89,13 @@ namespace voicevox_discord
                 foreach (var engine in engine_element.Elements("engine"))
                 {
                     var name = engine.Element("name")!.Value;
+                    var type = engine.Element("type")!.Value;
                     var ip = engine.Element("ipaddress")!.Value;
                     var port = int.Parse(engine.Element("port")!.Value);
 
                     // エンジンが立っていない場合はエラーを吐いてスキップしたかった
-                    var api = VoicevoxEngineApi.Create(ip, port, name);
+                    var api = EngineController.Create(ip, port, name, type);
+                    //var api = VoicevoxEngineApi.Create(ip, port, name);
                     engineDictionary.Add(name, api);
 
                     Console.WriteLine(engine.Element("ipaddress")!.Value + " : " + int.Parse(engine.Element("port")!.Value));
@@ -124,6 +136,43 @@ namespace voicevox_discord
             return guildSettingDictionary;
         }
 
+        private Dictionary<ulong, Dictionary<string, string>> GetGuildDictionary()
+        {
+            Dictionary<ulong ,Dictionary<string, string>> guildDictionary = new();
+
+            try
+            {
+                string[] guilds = Directory.GetFiles($"{Directory.GetCurrentDirectory()}/{GuildDictDir}");
+
+                foreach (var guild in guilds)
+                {
+                    string jsonstr = string.Empty;
+                    ulong guildid = 0;
+                    if (!ulong.TryParse(Path.GetFileName(guild), out guildid))
+                    {
+                        Console.WriteLine("[WARN]: 不正な辞書ファイルをスキップします。");
+                    }
+                    else
+                    {
+                        using (StreamReader sr = new StreamReader($"{Directory.GetCurrentDirectory()}/{guildid.ToString()}.json"))
+                        {
+                            jsonstr += sr.ReadToEnd();
+                            sr.Close();
+                        }
+
+                        Dictionary<string, string> guildDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonstr)!;
+                        guildDictionary.Add(guildid, guildDict);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            return guildDictionary;
+        }
+
         public void SaveGuildSettings()
         {
             while (m_GuildSaveObject == null)
@@ -131,9 +180,9 @@ namespace voicevox_discord
                 Task.Yield();
             }
 
-            if (!Monitor.TryEnter(LockObject))
+            while (!Monitor.TryEnter(LockSet))
             {
-                return; // 他のスレッドが制御を持っていたら何もせず離れる
+                Task.Yield(); // 他のスレッドが制御を持っていたら待機する
             }
 
             try
@@ -160,7 +209,44 @@ namespace voicevox_discord
             }
             finally
             {
-                Monitor.Exit(LockObject);
+                Monitor.Exit(LockSet);
+            }
+        }
+
+        public void SaveGuildDictionary(ulong guildid)
+        {
+            while (m_GuildDictionary == null)
+            {
+                Task.Yield();
+            }
+
+            while (!Monitor.TryEnter(LockDir))
+            {
+                Task.Yield(); // 他のスレッドが制御を持っていたら待機する
+            }
+
+            try
+            {
+                Dictionary<string, string> saveDictionary;
+                do
+                {
+                    saveDictionary = new(m_GuildDictionary[guildid]);
+                    string savejson = JsonConvert.SerializeObject(saveDictionary, Formatting.Indented);
+
+                    using (StreamWriter sw = new StreamWriter($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}", false, Encoding.UTF8))
+                    {
+                        sw.Write(savejson);
+                    }
+
+                } while ((saveDictionary.Count != m_GuildSaveObject.Count) || saveDictionary.All(_ => !m_GuildDictionary[guildid].TryGetValue(_.Key, out var value) || value != _.Value));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                Monitor.Exit(LockDir);
             }
         }
     }
