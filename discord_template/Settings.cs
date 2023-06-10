@@ -34,7 +34,9 @@ namespace voicevox_discord
 
         // (エンジン名, エンジン)
         public readonly IReadOnlyDictionary<string, EngineController> m_EngineList;
+        // (ギルドID, 話者情報)
         public readonly Dictionary<ulong, GuildSaveObject> m_GuildSaveObject;
+        // (ギルドID, 辞書)
         public readonly Dictionary<ulong, Dictionary<string, string>> m_GuildDictionary;
 
         public Settings()

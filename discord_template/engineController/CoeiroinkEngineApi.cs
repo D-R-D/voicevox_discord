@@ -1,4 +1,5 @@
 ﻿using Discord.Rest;
+using NAudio.MediaFoundation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,35 +55,39 @@ namespace voicevox_discord.engines
 
         //
         // 
-        public override Task<List<string>> GetSpeakers()
+        public override async Task<List<string>> GetSpeakers()
         {
-            throw new NotImplementedException();
+            while(m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return m_Speakers.Select(_ => _.speakerName).ToList()!;
         }
         //
         //
-        public override Task<List<string>> GetPagedSpeakers(int page)
+        public override async Task<List<string>> GetPagedSpeakers(int page)
         {
-            throw new NotImplementedException();
-        }
-        //
-        //
-        public override Task<int> GetStyleId(string name, string style)
-        {
-            throw new NotImplementedException();
+            while(m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return m_Speakers.Select(_ => _.speakerName).ToArray().Skip(page * 16).Take(16).ToList()!;
         }
         //
         //
         public override async Task<bool> SpeakerPageExist(int page)
         {
-            if (page < 0)
-            {
-                return false;
-            }
             while (m_Speakers == null)
             {
                 await Task.Yield();
             }
-            return m_Speakers.ToArray().Length > page * 16;
+            if (page < 0)
+            {
+                return false;
+            }
+            return m_Speakers.Count() > page * 16;
         }
         //
         //
@@ -93,27 +98,53 @@ namespace voicevox_discord.engines
                 await Task.Yield();
             }
 
-            return m_Speakers.Where(_ => _.speakerName == speakername).First().speakerUuid;
+            return m_Speakers.First(_ => _.speakerName == speakername).speakerUuid!;
         }
 
 
         //
         //
-        public override Task<List<string>> GetStyles(string speakername)
+        public override async Task<List<string>> GetStyles(string speakername)
         {
-            throw new NotImplementedException();
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return m_Speakers.First(_ => _.speakerName == speakername).styles!.Select(_ => _.styleName).ToList()!;
         }
         //
         //
-        public override Task<List<string>> GetPagedStyles(string speakername, int page)
+        public override async Task<List<string>> GetPagedStyles(string speakername, int page)
         {
-            throw new NotImplementedException();
+            while(m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return m_Speakers.First(_ => _.speakerName == speakername).styles!.Select(_ => _.styleName).Skip(page * 16).Take(16).ToList()!;
         }
         //
         // 
-        public override Task<bool> StylePageExist(string speakername, int page)
+        public override async Task<bool> StylePageExist(string speakername, int page)
         {
-            throw new NotImplementedException();
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return m_Speakers.First(_ => _.speakerName == speakername).styles!.Count() > page * 16;
+        }
+        //
+        //
+        public override async Task<int> GetStyleId(string name, string style)
+        {
+            while (m_Speakers == null)
+            {
+                await Task.Yield();
+            }
+
+            return (int)m_Speakers.First(_ => _.speakerName == name).styles!.First(_ => _.styleName == style).styleId!;
         }
 
     }
