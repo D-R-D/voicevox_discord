@@ -10,7 +10,7 @@ namespace voicevox_discord
         private readonly int m_EnginePort;
         private readonly string m_EngineName;
 
-        private IList<Speaker>? m_Speakers;
+        private IList<VoicevoxSpeaker>? m_Speakers;
         //
         //ipaddressとportを設定する
         public VoicevoxEngineApi(string ipAddress, int port, string name)
@@ -49,7 +49,7 @@ namespace voicevox_discord
         public override async void LoadSpeakers()
         {
             string json = await GetFromApi($@"http://{m_EngineIPAddress}:{m_EnginePort}/speakers");
-            m_Speakers = JsonConvert.DeserializeObject<IList<Speaker>>(json)!;
+            m_Speakers = JsonConvert.DeserializeObject<IList<VoicevoxSpeaker>>(json)!;
         }
 
         //
@@ -101,7 +101,7 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            return m_Speakers.Select(_ => _.name).ToList();
+            return m_Speakers.Select(_ => _.name).ToList()!;
         }
         public override async Task<List<string>> GetPagedSpeakers(int page)
         {
@@ -109,19 +109,19 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            return m_Speakers.Select(_ => _.name).ToArray().Skip(16 * page).Take(16).ToList();
+            return m_Speakers.Select(_ => _.name).ToArray().Skip(16 * page).Take(16).ToList()!;
         }
         public override async Task<bool> SpeakerPageExist(int page)
         {
-            if (page < 0)
-            {
-                return false;
-            }
             while (m_Speakers == null)
             {
                 await Task.Yield();
             }
-            return m_Speakers.ToArray().Length > page * 16;
+            if (page < 0)
+            {
+                return false;
+            }
+            return m_Speakers.Count() > page * 16;
         }
         public override async Task<string> GetSpeakerUUID(string speakername)
         {
@@ -130,7 +130,7 @@ namespace voicevox_discord
                 await Task.Yield();
             }
 
-            return m_Speakers.Where(_ => _.name == speakername).First().speaker_uuid;
+            return m_Speakers.First(_ => _.name == speakername).speaker_uuid!;
         }
 
         public override async Task<List<string>> GetStyles(string speakername)
@@ -140,7 +140,7 @@ namespace voicevox_discord
                 await Task.Yield();
             }
 
-            return m_Speakers.Where(_ => _.name == speakername).First().styles.Select(_ => _.name).ToList();
+            return m_Speakers.First(_ => _.name == speakername).styles!.Select(_ => _.name).ToList()!;
         }
         public override async Task<List<string>> GetPagedStyles(string speakername, int page)
         {
@@ -148,7 +148,7 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            return m_Speakers.Where(_ => _.name == speakername).First().styles.Select(_ => _.name).ToArray().Skip(16 * page).Take(16).ToList();
+            return m_Speakers.First(_ => _.name == speakername).styles!.Select(_ => _.name).ToArray().Skip(16 * page).Take(16).ToList()!;
         }
         public override async Task<bool> StylePageExist(string speakername, int page)
         {
@@ -160,7 +160,7 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            return m_Speakers.Where(_ => _.name == speakername).FirstOrDefault()!.styles.ToArray().Length > page * 16;
+            return m_Speakers.FirstOrDefault(_ => _.name == speakername)!.styles!.Count() > page * 16;
         }
         public override async Task<int> GetStyleId(string name, string style)
         {
@@ -168,7 +168,7 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            var id = m_Speakers.Where(_ => _.name == name).FirstOrDefault()?.styles.Where(_ => _.name == style).FirstOrDefault()?.id;
+            var id = m_Speakers.FirstOrDefault(_ => _.name == name)!.styles!.Where(_ => _.name == style).FirstOrDefault()?.id;
             if (id == null)
             {
                 throw new Exception($"speakerIDが存在しません。");

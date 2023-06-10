@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace voicevox_discord.engineController
+﻿namespace voicevox_discord.engineController
 {
     public abstract class SynthesisEngine
     {
@@ -23,62 +17,30 @@ namespace voicevox_discord.engineController
 
 
         //
-        // 
+        // 全話者名を返す
         public abstract Task<List<string>> GetSpeakers();
         //
-        // 指定されたpage * 16要素より後の16要素を返す
+        // 話者名16要素で1ページとするリストを返す
         public abstract Task<List<string>> GetPagedSpeakers(int page);
         //
-        // 
+        // 指定されたページの存在確認
         public abstract Task<bool> SpeakerPageExist(int page);
         //
-        //
+        // 指定されたUUIDに対応する話者名を返す
         public abstract Task<string> GetSpeakerUUID(string speakername);
 
 
         //
-        //
+        // 全スタイル名のリストを返す
         public abstract Task<List<string>> GetStyles(string speakername);
         //
-        // 
+        // スタイル名を16要素で1ページとするリストにして返す
         public abstract Task<List<string>> GetPagedStyles(string speakername, int page);
         //
-        //
+        // 指定されたページの存在確認
         public abstract Task<bool> StylePageExist(string speakername, int page);
         //
         // 話者スタイルIDを返す
         public abstract Task<int> GetStyleId(string name, string style);
     }
-
-
-#pragma warning disable CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
-    public class Speaker
-    {
-        public string name { get; set; }
-        public string speaker_uuid { get; set; }
-        public IList<Style> styles { get; set; }
-        public string version { get; set; }
-    }
-    public class Style
-    {
-        public string name { get; set; }
-        public int id { get; set; }
-    }
-
-    public class CoeiroinkSpeaker
-    {
-        public string speakerName { get; set; }
-        public string speakerUuid { get; set; }
-        public IList<CoeiroinkStyle> styles { get; set; }
-        public string version { get; set; }
-        public string base64Portrait { get; set; }
-    }
-    public class CoeiroinkStyle
-    {
-        public string styleName { get; set; }
-        public int styleId { get; set; }
-        public string base64Icon { get; set; }
-        public string base64Portrait { get; set; }
-    }
-#pragma warning restore CS8618 // null 非許容のフィールドには、コンストラクターの終了時に null 以外の値が入っていなければなりません。Null 許容として宣言することをご検討ください。
 }
