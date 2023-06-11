@@ -80,7 +80,7 @@ namespace voicevox_discord.engines
             {
                 return false;
             }
-            return m_Speakers.Count() > page * 16;
+            return m_Speakers.Count > page * 16;
         }
         //
         //
@@ -126,7 +126,7 @@ namespace voicevox_discord.engines
                 await Task.Yield();
             }
 
-            return m_Speakers.First(_ => _.speakerName == speakername).styles!.Count() > page * 16;
+            return m_Speakers.First(_ => _.speakerName == speakername).styles!.Count > page * 16;
         }
         //
         //

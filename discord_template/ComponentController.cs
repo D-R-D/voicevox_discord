@@ -40,7 +40,7 @@ namespace voicevox_discord
                         return (CommandMode, null);
                     }
 
-                    if ((await Settings.Shared.m_EngineList[InnerCommandValue].Engine.GetSpeakers()).Count() <= 0)
+                    if ((await Settings.Shared.m_EngineList[InnerCommandValue].Engine.GetSpeakers()).Count <= 0)
                     {
                         return ("FailedEngine", null);
                     }
@@ -69,7 +69,7 @@ namespace voicevox_discord
 
                 if(InnerCommandName == "speaker")
                 {
-                    var menuBuilder = await SelectMenuEditor.CreateStyleMenu(CustomID[1], $"{InnerCommandValue.Split('*')[0]}@{InnerCommandValue.Split('*')[1]}", 0, CommandMode);
+                    var menuBuilder = await SelectMenuEditor.CreateStyleMenu(CustomID[1], $"{InnerCommandValue}", 0, CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
 
                     return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}:{InnerCommandValue}(p.0)\n以下の選択肢から話者のスタイルを選択してください", builder);

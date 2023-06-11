@@ -2,7 +2,7 @@
 {
     internal class InitDirectory
     {
-        public void init()
+        public static void init()
         {
             checkdir("commands");
             checkdir("audiofile");
@@ -14,7 +14,7 @@
             checkfile("save/setting/GuildSpeaker.json");
         }
 
-        private void checkdir(string dirname)
+        private static void checkdir(string dirname)
         {
             if (!Directory.Exists($"{Directory.GetCurrentDirectory()}/{dirname}"))
             {
@@ -22,7 +22,7 @@
             }
         }
 
-        private void checkfile(string filename)
+        private static void checkfile(string filename)
         {
             if (!File.Exists($"{Directory.GetCurrentDirectory()}/{filename}"))
             {

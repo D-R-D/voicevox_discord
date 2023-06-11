@@ -121,7 +121,7 @@ namespace voicevox_discord
             {
                 return false;
             }
-            return m_Speakers.Count() > page * 16;
+            return m_Speakers.Count > page * 16;
         }
         public override async Task<string> GetSpeakerUUID(string speakername)
         {
@@ -160,7 +160,7 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            return m_Speakers.FirstOrDefault(_ => _.name == speakername)!.styles!.Count() > page * 16;
+            return m_Speakers.First(_ => _.name == speakername)!.styles!.Count > page * 16;
         }
         public override async Task<int> GetStyleId(string name, string style)
         {
@@ -168,7 +168,7 @@ namespace voicevox_discord
             {
                 await Task.Yield();
             }
-            var id = m_Speakers.FirstOrDefault(_ => _.name == name)!.styles!.Where(_ => _.name == style).FirstOrDefault()?.id;
+            var id = m_Speakers.First(_ => _.name == name)!.styles!.Where(_ => _.name == style).First()?.id;
             if (id == null)
             {
                 throw new Exception($"speakerIDが存在しません。");

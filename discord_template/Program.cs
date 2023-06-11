@@ -15,8 +15,8 @@ namespace voicevox_discord
 
         public static void Main(string[] args)
         {
-            InitDirectory initDirectory = new InitDirectory();
-            initDirectory.init();
+            // 仕様ファイル・ディレクトリの存在チェック
+            InitDirectory.init();
 
             //コマンドファイルからjson形式でコマンドを取得・設定する
             CommandSender.RegisterGuildCommands();
@@ -252,13 +252,12 @@ namespace voicevox_discord
                     // /setspeaker ギルド話者の登録処理
                     if (respondcontent.label == "setspeaker")
                     {
-                        string speakername = CustomID[2].Split('@')[0];
-                        string speakeruuid = CustomID[2].Split('@')[1];
+                        string speakername = CustomID[2];
                         string stylename = InnerCommandValue;
                         int speakerId = await Settings.Shared.m_EngineList[CustomID[1]].Engine.GetStyleId(speakername, stylename);
-                        s_AudioService.SetSpeaker(guildid, speakername, speakeruuid,stylename, speakerId, CustomID[1]);
+                        s_AudioService.SetSpeaker(guildid, speakername, stylename, speakerId, CustomID[1]);
 
-                        await arg.RespondAsync($"話者を[{CustomID[1].ToUpper()}:{speakername} @ {stylename} (id:{speakerId})]に変更しました");
+                        await arg.RespondAsync($"話者を[{CustomID[1].ToUpper()}:{speakername}@{stylename} (id:{speakerId})]に変更しました");
                         return;
                     }
 

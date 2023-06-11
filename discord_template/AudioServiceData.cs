@@ -58,12 +58,12 @@ namespace voicevox_discord
         /*------------------------------------------*/
 
 
-        public void SetSpeaker(string engineName, string speakerName, string uuid,string styleName, int id)
+        public void SetSpeaker(string engineName, string speakerName, string styleName, int id)
         {
             GuildSave.guildSpeaker.engineName = engineName;
             GuildSave.guildSpeaker.engineType = Settings.Shared.m_EngineList[engineName].engineType;
             GuildSave.guildSpeaker.name = speakerName;
-            GuildSave.guildSpeaker.uuid = uuid;
+            GuildSave.guildSpeaker.uuid = Settings.Shared.m_EngineList[engineName].Engine.GetSpeakerUUID(speakerName).Result;
             GuildSave.guildSpeaker.style = styleName;
             GuildSave.guildSpeaker.speakerId = id;
 
@@ -80,7 +80,7 @@ namespace voicevox_discord
                 guildSpeaker = guildSaveObject.guildSpeaker;
             }
 
-            SetSpeaker(guildSpeaker.engineName, guildSpeaker.name, guildSpeaker.uuid,guildSpeaker.style, guildSpeaker.speakerId);
+            SetSpeaker(guildSpeaker.engineName, guildSpeaker.name, guildSpeaker.style, guildSpeaker.speakerId);
         }
 
         public void SaveSpeaker()

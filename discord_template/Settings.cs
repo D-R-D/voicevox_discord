@@ -14,8 +14,8 @@ namespace voicevox_discord
     public class Settings
     {
         private const string XmlFileName = "voicevox_engine_list.xml";
-        private const string GuildSaveFile = "save/setting/GuildSpeaker.json";
-        private const string GuildDictDir = "save/dictionary";
+        private const string GuildSaveFile = "guildSave/setting/GuildSpeaker.json";
+        private const string GuildDictDir = "guildSave/dictionary";
         private readonly object LockSet = new object();
         private readonly object LockDir = new object();
 
@@ -81,6 +81,8 @@ namespace voicevox_discord
             m_GuildDictionary = GetGuildDictionary();
         }
         
+        //
+        // こいつの読み取りファイルはビルド時に生成される。
         private Dictionary<string, EngineController> GetServerXML()
         {
             var engineDictionary = new Dictionary<string, EngineController>();
@@ -111,6 +113,8 @@ namespace voicevox_discord
             return engineDictionary;
         }
 
+        //
+        // こいつの読み取りファイルは単一でビルド時に生成される。
         private Dictionary<ulong, GuildSaveObject> GetGuildSettings()
         {
             var guildSettingDictionary = new Dictionary<ulong, GuildSaveObject>();
@@ -235,7 +239,7 @@ namespace voicevox_discord
                     saveDictionary = new(m_GuildDictionary[guildid]);
                     string savejson = JsonConvert.SerializeObject(saveDictionary, Formatting.Indented);
 
-                    using (StreamWriter sw = new StreamWriter($"{Directory.GetCurrentDirectory()}/{GuildSaveFile}", false, Encoding.UTF8))
+                    using (StreamWriter sw = new StreamWriter($"{Directory.GetCurrentDirectory()}/{GuildDictDir}/{guildid}.json", false, Encoding.UTF8))
                     {
                         sw.Write(savejson);
                     }

@@ -133,12 +133,12 @@ namespace voicevox_discord
         /// <param name="speakerName"></param>
         /// <param name="styleName"></param>
         /// <param name="id"></param>
-        public void SetSpeaker(ulong guildid, string speakerName, string uuid,string styleName, int id, string engineName)
+        public void SetSpeaker(ulong guildid, string speakerName, string styleName, int id, string engineName)
         {
             Task.Run(() =>
             {
                 var target = GetOrCreateAudioServiceData(guildid);
-                target.SetSpeaker(engineName, speakerName, uuid,styleName, id);
+                target.SetSpeaker(engineName, speakerName, styleName, id);
 
                 if (target.audioclient == null || target.audioclient!.ConnectionState != ConnectionState.Connected)
                 {

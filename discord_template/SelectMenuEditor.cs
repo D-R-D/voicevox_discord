@@ -29,7 +29,7 @@ namespace voicevox_discord
             {
                 try
                 {
-                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"{(await Settings.Shared.m_EngineList[engineName].Engine.GetSpeakers()).Count()} params found.");
+                    builder.AddOption(engineName.ToUpper(), $"engine@{engineName}", $"{(await Settings.Shared.m_EngineList[engineName].Engine.GetSpeakers()).Count} params found.");
                 }
                 catch (Exception ex)
                 {
@@ -73,9 +73,8 @@ namespace voicevox_discord
             {
                 try
                 {
-                    var uuid = await Settings.Shared.m_EngineList[engineName].Engine.GetSpeakerUUID(speaker);
                     var styles = await Settings.Shared.m_EngineList[engineName].Engine.GetStyles(speaker);
-                    builder.AddOption(speaker, $"speaker@{speaker}*{uuid}", $"{styles.Count} params found.");
+                    builder.AddOption(speaker, $"speaker@{speaker}", $"{styles.Count} params found.");
                 }
                 catch (Exception ex) 
                 {
