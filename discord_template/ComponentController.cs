@@ -42,7 +42,7 @@ namespace voicevox_discord
 
                     if ((await Settings.Shared.m_EngineList[InnerCommandValue].Engine.GetSpeakers()).Count <= 0)
                     {
-                        return ("FailedEngine", null);
+                        throw new Exception("エンジン情報が読み込まれていません。");
                     }
 
                     if (CommandMode.Split('.')[0] == "dict")
@@ -93,7 +93,7 @@ namespace voicevox_discord
                 }
             }
 
-            return (null, null);
+            throw new Exception($"該当するコマンドが見つかりませんでした。\nコマンド名: {commandName}");
         }
     }
 }

@@ -21,7 +21,20 @@ namespace voicevox_discord.engines
         // エンジンのインスタンスを作成する
         public override SynthesisEngine Create(string ipAddress, int port, string name)
         {
-            throw new NotImplementedException();
+            var instance = new CoeiroinkEngineApi(ipAddress, port, name);
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    instance.LoadSpeakers();
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+            return instance;
         }
 
         //

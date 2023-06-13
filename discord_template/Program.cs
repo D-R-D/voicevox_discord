@@ -43,7 +43,10 @@ namespace voicevox_discord
             await _client.StartAsync();
 
             // Block this task until the program is closed.
-            await Task.Delay(-1);
+            while (true)
+            {
+                await Task.Yield();
+            }
         }
 
         private Task Log(LogMessage message)
@@ -200,7 +203,7 @@ namespace voicevox_discord
                     ComponentController selectMenuController = new ComponentController(arg);
 
                     Console.WriteLine($"[{arg.Data.CustomId}] : [{arg.Data.Values.First()}]");
-                    string[] CustomID = arg.Data.CustomId.Split(':');          // コマンド名[.機能名] : [エンジン名] : [話者名@uuid] : コマンドモード
+                    string[] CustomID = arg.Data.CustomId.Split(':');          // コマンド名[.機能名] : [エンジン名] : [話者名] : コマンドモード
                     string[] CustomValue = arg.Data.Values.First().Split('@'); // 内部コマンド名 @ コマンド値
 
                     string commandName = CustomID.First();
@@ -209,33 +212,6 @@ namespace voicevox_discord
                     string CommandMode = CustomID.Last();
 
                     var respondcontent = await selectMenuController.BuildComponent();
-                    //
-                    /*--------------------エラー処理--------------------*/
-                    if (respondcontent.label == null && respondcontent.builder == null)
-                    {
-                        await arg.RespondAsync("値の破損を確認しました。処理をスキップします。");
-                        return;
-                    }
-
-                    if (respondcontent.label == "FailedEngine")
-                    {
-                        try
-                        {
-                            Settings.Shared.m_EngineList[InnerCommandValue].Engine.LoadSpeakers();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-
-                            await arg.RespondAsync($"[{InnerCommandValue}]:エラーが発生したから話者リストを再読み込みたけど失敗しちゃった…\n{ex.Message}");
-                            return;
-                        }
-
-                        await arg.RespondAsync($"[{InnerCommandValue}]:エラーが発生したから話者リスト再読み込みしたよ。");
-                        return;
-                    }
-                    /*--------------------エラー処理--------------------*/
-                    //
 
                     //
                     // /voice コマンド、wav生成の内容記述
