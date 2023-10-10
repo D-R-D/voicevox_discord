@@ -6,7 +6,7 @@ namespace voicevox_discord
 {
     public class AudioServiceData
     {
-        public AudioServiceData(ulong guildid)
+        private AudioServiceData(ulong guildid)
         {
             guildId = guildid;
             
@@ -18,7 +18,7 @@ namespace voicevox_discord
             GuildSave.guildSpeaker = new GuildSpeaker
             {
                 engineName = Settings.Shared.m_EngineList.First().Key,
-                engineType = Settings.Shared.m_EngineList.First().Value.engineType,
+                engineType = EngineType.GetNameFromType(Settings.Shared.m_EngineList.First().Value.engineType),
                 name = speaker,
                 uuid = guildEngine.GetSpeakerUUID(speaker).Result,
                 style = stylename,
@@ -61,7 +61,7 @@ namespace voicevox_discord
         public void SetSpeaker(string engineName, string speakerName, string styleName, int id)
         {
             GuildSave.guildSpeaker.engineName = engineName;
-            GuildSave.guildSpeaker.engineType = Settings.Shared.m_EngineList[engineName].engineType;
+            GuildSave.guildSpeaker.engineType = EngineType.GetNameFromType(Settings.Shared.m_EngineList[engineName].engineType);
             GuildSave.guildSpeaker.name = speakerName;
             GuildSave.guildSpeaker.uuid = Settings.Shared.m_EngineList[engineName].Engine.GetSpeakerUUID(speakerName).Result;
             GuildSave.guildSpeaker.style = styleName;

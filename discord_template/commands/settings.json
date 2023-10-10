@@ -1,0 +1,22 @@
+{
+  "name": "settings",
+  "description": "Voice Bot Settings",
+  "options": [
+    {
+      "name": "setting",
+      "description": "Audio Setting",
+      "type": 3,
+      "required": true,
+      "choices": [
+        {
+          "name": "setspeaker",
+          "value": "setspeaker"
+        },
+        {
+          "name": "reload",
+          "value": "reload"
+        }
+      ]
+    }
+  ]
+}

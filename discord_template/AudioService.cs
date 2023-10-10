@@ -9,11 +9,11 @@ using NAudio.CoreAudioApi;
 
 namespace voicevox_discord
 {
-    internal class AudioService
+    internal static class AudioService
     {
-        internal Dictionary<ulong, AudioServiceData> GuildAudioServiceDict = new Dictionary<ulong, AudioServiceData>();
+        internal static Dictionary<ulong, AudioServiceData> GuildAudioServiceDict = new Dictionary<ulong, AudioServiceData>();
 
-        public AudioServiceData GetOrCreateAudioServiceData(ulong guildid)
+        public static AudioServiceData GetOrCreateAudioServiceData(ulong guildid)
         {
             if (!GuildAudioServiceDict.ContainsKey(guildid)) 
             {
@@ -31,7 +31,7 @@ namespace voicevox_discord
         /// <param name="command"></param>
         /// <param name="firstval"></param>
         /// <returns></returns>
-        public async Task JoinOperation(SocketSlashCommand command, string firstval)
+        public static async Task JoinOperation(SocketSlashCommand command, string firstval)
         {
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
@@ -85,7 +85,7 @@ namespace voicevox_discord
             }
         }
         
-        private async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid) 
+        private static async Task JoinChannel(bool rejoin, AudioServiceData audioServiseData, ulong guildid) 
         {
             audioServiseData.audioclient = await audioServiseData.voiceChannel!.ConnectAsync(selfDeaf: true).ConfigureAwait(false);
             audioServiseData.audiooutstream = audioServiseData.audioclient.CreatePCMStream(AudioApplication.Mixed, packetLoss: 10);
@@ -115,7 +115,7 @@ namespace voicevox_discord
         /// 
         /// </summary>
         /// <returns></returns>
-        private async Task LeaveAsync(ulong guildid)
+        private static async Task LeaveAsync(ulong guildid)
         {
             AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
             audioServiseData.voiceChannel = null;
@@ -133,7 +133,7 @@ namespace voicevox_discord
         /// <param name="speakerName"></param>
         /// <param name="styleName"></param>
         /// <param name="id"></param>
-        public void SetSpeaker(ulong guildid, string speakerName, string styleName, int id, string engineName)
+        public static void SetSpeaker(ulong guildid, string speakerName, string styleName, int id, string engineName)
         {
             Task.Run(() =>
             {
@@ -168,7 +168,7 @@ namespace voicevox_discord
         /// <param name="text"></param>
         /// <param type="role"></param>
         /// <returns></returns>
-        public async Task Chat(SocketSlashCommand command, string text)
+        public static async Task Chat(SocketSlashCommand command, string text)
         {
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiceData = GetOrCreateAudioServiceData(guildid);
@@ -219,7 +219,7 @@ namespace voicevox_discord
         /// <param name="command"></param>
         /// <param name="text"></param>
         /// <returns></returns>
-        public async Task TextReader(SocketSlashCommand command, string text)
+        public static async Task TextReader(SocketSlashCommand command, string text)
         {
             ulong guildid = command.GuildId!.Value;
             AudioServiceData audioServiseData = GetOrCreateAudioServiceData(guildid);
@@ -248,7 +248,7 @@ namespace voicevox_discord
         }
 
 
-        private async Task PlayAudio(AudioServiceData audioServiseData, ulong guildid, string text)
+        private static async Task PlayAudio(AudioServiceData audioServiseData, ulong guildid, string text)
         {
             if (audioServiseData.IsSpeaking)
             {
@@ -299,7 +299,7 @@ namespace voicevox_discord
             audioServiseData.IsSpeaking = false;
         }
 
-        private Process CreateStream(ulong guildid)
+        private static Process CreateStream(ulong guildid)
         {
             string ffmpegdir = $"{Directory.GetCurrentDirectory()}/audiofile";
 

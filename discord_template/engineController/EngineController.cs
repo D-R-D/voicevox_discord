@@ -5,26 +5,25 @@ namespace voicevox_discord.engines
     public class EngineController
     {
         public SynthesisEngine Engine { get; private set; }
-        public string engineType { get; private set; }
+        public EngineType.Engine engineType { get; private set; }
 
-        private EngineController(string ip, int port, string name, string type)
+        private EngineController(string ip, int port, string name, EngineType.Engine type)
         {
             if (Tools.IsNullOrEmpty(ip)) { throw new ArgumentNullException("ipaddress"); }
             if (Tools.IsNotPortNumber(port)) { throw new Exception($"port がポート番号でない、もしくはNullです。"); }
             if (Tools.IsNullOrEmpty(name)) { throw new ArgumentNullException("name"); }
 
-            switch (type)
+            if (type == EngineType.Engine.VOICEVOX || type == EngineType.Engine.COEIROINK_v1)
             {
-                case "coeiroink":
-                    Engine = new CoeiroinkEngineApi(ip, port, name);
-                    break;
-
-                case "voicevox":
-                    Engine = new VoicevoxEngineApi(ip, port, name);
-                    break;
-
-                default:
-                    throw new Exception($"name:{name}\ntype: {type} は不正なエンジンtypeです。");
+                Engine = new VoicevoxEngineApi(ip, port, name);
+            }
+            else if(type == EngineType.Engine.COEIROINK_v2)
+            {
+                Engine = new CoeiroinkEngineApi(ip, port, name);
+            }
+            else
+            {
+                throw new Exception($"name:{name}\ntype: {type} は不正なエンジンtypeです。");
             }
 
             engineType = type;
@@ -32,7 +31,9 @@ namespace voicevox_discord.engines
 
         public static EngineController Create(string ip, int port, string name, string type)
         {
-            return new EngineController(ip, port, name, type);
+            EngineType.Engine enginetype = EngineType.GetTypeFromName(type);
+
+            return new EngineController(ip, port, name, enginetype);
         }
     }
 }

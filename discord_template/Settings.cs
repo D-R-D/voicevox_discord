@@ -1,11 +1,7 @@
-﻿using Discord.Rest;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Configuration;
-using System.Net.Sockets;
-using System.Security.Policy;
 using System.Text;
 using System.Xml.Linq;
-using voicevox_discord.engineController;
 using voicevox_discord.engines;
 
 namespace voicevox_discord

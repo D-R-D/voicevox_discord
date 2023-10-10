@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 
-namespace voicevox_discord
+namespace voicevox_discord.commandCtrl
 {
     public class ComponentController
     {
@@ -23,9 +23,9 @@ namespace voicevox_discord
             string InnerCommandName = CustomValue.First();
             string InnerCommandValue = CustomValue.Last();
 
-            if(commandName == "engine")
+            if (commandName == "engine")
             {
-                if(InnerCommandName == "page")
+                if (InnerCommandName == "page")
                 {
                     var menuBuilder = await SelectMenuEditor.CreateEngineMenu(int.Parse(InnerCommandValue), CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
@@ -33,7 +33,7 @@ namespace voicevox_discord
                     return ($"[/{CommandMode}](p.{InnerCommandValue})\n以下の選択肢からエンジンを選択してください", builder);
                 }
 
-                if(InnerCommandName == "engine")
+                if (InnerCommandName == "engine")
                 {
                     if (CommandMode == "reload")
                     {
@@ -57,9 +57,9 @@ namespace voicevox_discord
                 }
             }
 
-            if( commandName == "speaker")
+            if (commandName == "speaker")
             {
-                if(InnerCommandName == "page")
+                if (InnerCommandName == "page")
                 {
                     var menuBuilder = await SelectMenuEditor.CreateSpeakerMenu(CustomID[1], int.Parse(InnerCommandValue), CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
@@ -67,7 +67,7 @@ namespace voicevox_discord
                     return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}(p.{InnerCommandValue})\n以下の選択肢から話者を選択してください", builder);
                 }
 
-                if(InnerCommandName == "speaker")
+                if (InnerCommandName == "speaker")
                 {
                     var menuBuilder = await SelectMenuEditor.CreateStyleMenu(CustomID[1], $"{InnerCommandValue}", 0, CommandMode);
                     var builder = new ComponentBuilder().WithSelectMenu(menuBuilder);
@@ -76,7 +76,7 @@ namespace voicevox_discord
                 }
             }
 
-            if(commandName == "speaker_id")
+            if (commandName == "speaker_id")
             {
                 // ファイル生成、話者選択など
                 if (InnerCommandName == "page")
@@ -86,8 +86,8 @@ namespace voicevox_discord
 
                     return ($"[/{CommandMode}]@{CustomID[1].ToUpper()}(p.{InnerCommandValue})\n以下の選択肢からスタイルを選択してください", builder);
                 }
-                
-                if(InnerCommandName == "id")
+
+                if (InnerCommandName == "id")
                 {
                     return (CommandMode, null);
                 }

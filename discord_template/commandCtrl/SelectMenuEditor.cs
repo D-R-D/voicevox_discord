@@ -1,16 +1,16 @@
 ﻿using Discord;
 
-namespace voicevox_discord
+namespace voicevox_discord.commandCtrl
 {
     public class SelectMenuEditor
     {
         /// <summary>
         /// エンジン一覧
         /// CustomId == "engine : {commandmode]"
+        /// OptionValue == "engine @ {engineName}"
         /// 
         /// ：ページ選択時：
         /// OptionValue == "page @ {pageNumber}"
-        /// OptionValue == "engine @ {engineName}"
         /// </summary>
         /// <param name="page"></param>
         /// <param name="voiceChannel"></param>
@@ -18,14 +18,14 @@ namespace voicevox_discord
         public static async Task<SelectMenuBuilder> CreateEngineMenu(int page, string CommandMode)
         {
             SelectMenuBuilder builder = new SelectMenuBuilder().WithPlaceholder($"エンジン一覧 p.{page}").WithCustomId($"engine:{CommandMode}").WithMinValues(1).WithMaxValues(1);
-            
+
             var engines = Settings.Shared.m_EngineList.Keys.Skip(16 * page).Take(16).ToArray();
             if (page > 0)
             {
-                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
+                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {page - 1}.");
             }
 
-            foreach ( var engineName in engines )
+            foreach (var engineName in engines)
             {
                 try
                 {
@@ -37,7 +37,7 @@ namespace voicevox_discord
                 }
             }
 
-            if (Settings.Shared.m_EngineList.Keys.ToArray().Count() > (16 * (page + 1)))
+            if (Settings.Shared.m_EngineList.Keys.ToArray().Count() > 16 * (page + 1))
             {
                 builder.AddOption("Next page.", $"page@{page + 1}", $"Go to page {page + 1}.");
             }
@@ -49,10 +49,11 @@ namespace voicevox_discord
         /// <summary>
         /// 話者一覧
         /// CustomId == "speaker_id : {engineName} : {commandmode]"
+        /// OptionValue == "speaker@{speakerName}"
         /// 
         /// ：ページ選択時：
         /// OptionValue == "page@{pageNumber}"
-        /// OptionValue == "speaker@{speakerName}"
+        /// 
         /// </summary>
         /// <param name="engineName"></param>
         /// <param name="page"></param>
@@ -64,7 +65,7 @@ namespace voicevox_discord
 
             if (page > 0)
             {
-                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
+                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {page - 1}.");
             }
 
             var speakers = await Settings.Shared.m_EngineList[engineName].Engine.GetPagedSpeakers(page);
@@ -76,7 +77,7 @@ namespace voicevox_discord
                     var styles = await Settings.Shared.m_EngineList[engineName].Engine.GetStyles(speaker);
                     builder.AddOption(speaker, $"speaker@{speaker}", $"{styles.Count} params found.");
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
                 }
@@ -92,10 +93,10 @@ namespace voicevox_discord
         /// <summary>
         /// 話者のスタイル一覧
         /// CustomId == "speaker_id : {engineName} : {speakerName} : {commandmode]"
+        /// OptionValue == "id@{speakerName}@{styleName}"
         /// 
         /// ：ページ選択時：
         /// OptionValue == "page@{pageNumber}"
-        /// OptionValue == "id@{speakerName}@{styleName}"
         /// </summary>
         /// <param name="engineName"></param>
         /// <param name="speakerName"></param>
@@ -108,12 +109,12 @@ namespace voicevox_discord
 
             if (page > 0)
             {
-                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {(page - 1)}.");
+                builder.AddOption("Previous page.", $"page@{page - 1}", $"Go to page {page - 1}.");
             }
 
             var styles = await Settings.Shared.m_EngineList[engineName].Engine.GetPagedStyles(speakerName, page);
 
-            foreach (var style in styles) 
+            foreach (var style in styles)
             {
                 try
                 {

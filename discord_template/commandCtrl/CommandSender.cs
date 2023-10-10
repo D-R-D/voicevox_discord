@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace voicevox_discord
+namespace voicevox_discord.commandCtrl
 {
     public class CommandSender
     {
@@ -24,7 +24,7 @@ namespace voicevox_discord
             HttpClient client = new HttpClient();
             foreach (string jsonCommand in CommandList)
             {
-                foreach (string id in Settings.Shared.m_GuildIds) 
+                foreach (string id in Settings.Shared.m_GuildIds)
                 {
                     HttpRequestMessage request = GetHeader(id);
 
